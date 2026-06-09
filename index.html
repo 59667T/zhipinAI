@@ -1776,7 +1776,9 @@
             const rl = raw.toLowerCase();
             const data = {
                 name:'', phone:'', email:'', school:'', major:'', degree:'', gradYear:'', gpa:'',
-                courses:[], skills:[], softSkills:[], projects:[], internships:[], awards:[], certs:[], campus:[]
+                courses:[], skills:[], softSkills:[], politics:'',
+                // 块级提取：保留完整的多行描述
+                eduBlocks:[], internBlocks:[], projBlocks:[], awards:[], certs:[], campus:[]
             };
 
             // 姓名
@@ -1789,25 +1791,44 @@
             data.phone = (raw.match(/1[3-9]\d{9}/) || [''])[0];
             data.email = (raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [''])[0];
 
-            // 教育
-            const sm = raw.match(/(\S*(?:大学|学院|University))/i);
-            if (sm) data.school = sm[1];
-            if (raw.includes('博士') || /Ph\.?D/i.test(raw)) data.degree = '博士';
-            else if (raw.includes('硕士') || raw.includes('研究生')) data.degree = '硕士';
-            else if (raw.includes('本科') || raw.includes('学士')) data.degree = '本科';
-            else if (raw.includes('大专') || raw.includes('专科')) data.degree = '大专';
+            // 政治面貌
+            if (/中共党员|党员/.test(raw) && !/非党员|预备/.test(raw.split(/中共党员|党员/)[0])) data.politics = '中共党员';
+            else if (/预备党员/.test(raw)) data.politics = '预备党员';
+            else if (/共青团员|共青团/.test(raw)) data.politics = '共青团员';
 
-            const mj = raw.match(/专业[：:]\s*(\S+)|(\S+(?:工程|科学|技术|管理|设计|医学|法学|教育|文学|艺术|经济|金融|会计|营销|人力|临床|口腔|药学|护理|机械|电子|电气|土木|建筑|化工))\s*(?:专业|本科|硕士)?/);
-            if (mj) data.major = (mj[1] || mj[2] || '').replace(/专业$/, '');
-
-            const yr = raw.match(/20\d{2}\s*(?:年|届|级|毕业)/);
-            if (yr) data.gradYear = yr[0].replace(/[年届级毕业]/g, '');
-
-            const gm = raw.match(/(?:GPA|绩点|平均分)[：: ]*(\d+\.?\d*)/i);
-            if (gm) data.gpa = gm[1];
-
-            const cm = raw.match(/(?:主修|核心|相关)?课程[：:]\s*([^\n]+)/);
-            if (cm) cm[1].split(/[，,、;；]/).forEach(c => { const t = c.trim(); if (t && t.length < 30) data.courses.push(t); });
+            // 教育 — 块级提取（学校+专业+学历+年份+GPA+课程，合并为一块）
+            const eduRe = /((?:20|19)\d{2})\s*(?:\.?\d{1,2})?\s*[-—–~～至]\s*(?:20|19)\d{2}\s*(?:\.?\d{1,2})?\s+([^\n]+)\n|(\S+(?:大学|学院|University))[\s\S]*?(?=\n\n|\n[^\s#·]|\n\d{4}\.|$)/gi;
+            // 先提取学校行及紧随的详细信息
+            const schoolMatch = raw.match(/(\S+(?:大学|学院|University))[^\n]*/i);
+            if (schoolMatch) {
+                data.school = schoolMatch[1];
+                // 收集学校行及后续教育信息（到空行或日期行停止）
+                const sIdx = raw.indexOf(schoolMatch[0]);
+                const afterLines = raw.slice(sIdx).split('\n').slice(1);
+                let eduBlock = schoolMatch[0];
+                for (const el of afterLines) {
+                    if (el.trim() === '' || /^\d{4}[.\-]/.test(el.trim())) break;
+                    eduBlock += '\n' + el;
+                }
+                // 提取学历
+                if (/博士|Ph\.?D/i.test(eduBlock)) data.degree = '博士';
+                else if (/硕士|研究生/.test(eduBlock)) data.degree = '硕士';
+                else if (/本科|学士/.test(eduBlock)) data.degree = '本科';
+                else if (/大专|专科/.test(eduBlock)) data.degree = '大专';
+                // 提取专业
+                const mj = eduBlock.match(/专业[：:]\s*(\S+)|(\S+(?:工程|科学|技术|管理|设计|医学|法学|教育|文学|艺术|经济|金融|会计|营销|人力|临床|口腔|药学|护理|机械|电子|电气|土木|建筑|化工))\s*(?:专业|本科|硕士)?/);
+                if (mj) data.major = (mj[1] || mj[2] || '').replace(/专业$/, '');
+                // 年份
+                const yr = eduBlock.match(/(20\d{2})\s*(?:年|届|级|毕业)/);
+                if (yr) data.gradYear = yr[1];
+                // GPA
+                const gm = eduBlock.match(/(?:GPA|绩点|平均分)[：: ]*(\d+\.?\d*)/i);
+                if (gm) data.gpa = gm[1];
+                // 课程
+                const cm = eduBlock.match(/(?:主修|核心|相关)?课程[：:]\s*([^\n]+)/);
+                if (cm) cm[1].split(/[，,、;；]/).forEach(c => { const t = c.trim(); if (t && t.length < 30) data.courses.push(t); });
+                data.eduBlocks.push(eduBlock.trim());
+            }
 
             // 技能检测 — IT技术类
             const techKws = [
@@ -1827,7 +1848,6 @@
             });
 
             // 技能检测 — 全行业通用（医疗/法学/教育/设计/金融等）
-            // 从"技能：xxx,xxx"行中提取
             const skillLine = raw.match(/(?:技能|专业技能|职业技能)[：:]\s*([^\n]+)/i);
             if (skillLine) {
                 skillLine[1].split(/[，,、;；\/]/).forEach(s => {
@@ -1844,23 +1864,41 @@
             if (raw.includes('计算机二级')) data.softSkills.push('计算机二级');
             if (raw.includes('普通话')) data.softSkills.push('普通话');
 
-            // 项目/经历提取
-            const tagKw = ['项目','实习','课设','课程设计','大作业','毕设','毕业设计','比赛','竞赛','训练营','经历','实践','实训'];
-            for (const tk of tagKw) {
-                const re = new RegExp(`[^。\\n]*${tk}[^。\\n]*[。，,；;\\n]`, 'gi');
-                let m; while ((m = re.exec(raw)) !== null) { const t = m[0].trim().replace(/[。，,；;.\n]$/g,''); if (t.length > 8 && !data.projects.includes(t)) data.projects.push(t); }
-            }
-            if (data.projects.length === 0) {
-                const vr = /(独立|主导|负责|参与|完成|开发|设计|构建|搭建|实现|优化|重构|部署|上线|接诊|诊断|治疗|护理|分析|策划|撰写|翻译|主持|组织)[^。，,；;\n]{5,}[。，,；;\n]/g;
-                let m; while ((m = vr.exec(raw)) !== null && data.projects.length < 4) { const t = m[0].trim().replace(/[。，,；;.\n]$/g,''); if (!data.projects.includes(t)) data.projects.push(t); }
+            // ====== 块级经历提取 ======
+            // 按日期行分段，每个"日期段"是一个完整的经历块（包含标题+所有描述行）
+            const dateBlocks = raw.split(/\n(?=\d{4}[.\-—–~～年]\s*\d{1,2})/);
+            for (const block of dateBlocks) {
+                const trimmed = block.trim();
+                if (!trimmed || trimmed.length < 10) continue;
+                const hasCompany = /(公司|科技|集团|网络|软件|银行|证券|医院|事务所|律所|设计院|研究院|咨询|传媒|实验室)/.test(trimmed);
+                const hasIntern = /实习|intern/i.test(trimmed);
+                const hasProject = /项目|project|课设|毕设|毕业设计|大作业/.test(trimmed);
+                // 判断是否是学校教育行（排除）
+                if (/(大学|学院|University)/.test(trimmed) && !hasCompany && !hasIntern && !hasProject) continue;
+
+                if (hasCompany || hasIntern) {
+                    data.internBlocks.push(trimmed);
+                } else if (hasProject) {
+                    data.projBlocks.push(trimmed);
+                } else {
+                    // 兜底：看是否有动词开头的行为描述
+                    if (/^(独立|主导|负责|参与|完成|开发|设计|构建|搭建|实现|优化|重构|部署|上线|接诊|诊断|治疗|护理|分析|策划|撰写|翻译|主持|组织)/.test(trimmed.split('\n').pop())) {
+                        data.projBlocks.push(trimmed);
+                    }
+                }
             }
 
-            // 实习/公司
-            const coRe = /(\S{2,10}(?:公司|科技|集团|网络|软件|银行|证券|医院|事务所|律所|设计院|研究院|咨询|传媒))/g;
-            let cm2; while ((cm2 = coRe.exec(raw)) !== null) { if (!data.internships.includes(cm2[1])) data.internships.push(cm2[1]); }
+            // 如果块级提取为空，回退到行级提取（兼容简单格式）
+            if (data.internBlocks.length === 0 && data.projBlocks.length === 0) {
+                const tagKw = ['项目','实习','课设','课程设计','大作业','毕设','毕业设计','比赛','竞赛','训练营','经历','实践','实训'];
+                for (const tk of tagKw) {
+                    const re = new RegExp(`[^。\\n]*${tk}[^。\\n]*[。，,；;\\n]`, 'gi');
+                    let m; while ((m = re.exec(raw)) !== null) { const t = m[0].trim().replace(/[。，,；;.\n]$/g,''); if (t.length > 8 && !data.projBlocks.includes(t)) data.projBlocks.push(t); }
+                }
+            }
 
-            // 荣誉
-            const awRe = /(国家奖学金|励志奖学金|一等奖学金|二等奖学金|三等奖学金|优秀学生|三好学生|优秀毕业生|优秀干部|优秀党员|\S+大赛\S*(?:一等奖|二等奖|三等奖|金奖|银奖|铜奖|冠军|亚军|季军)|省\S*奖|国\S*奖)/g;
+            // 荣誉 — 扩展匹配范围
+            const awRe = /(国家奖学金|励志奖学金|一等奖学金|二等奖学金|三等奖学金|优秀学生|三好学生|优秀毕业生|优秀干部|优秀党员|校三好学生|校优秀学生|优秀学生干部|\S+大赛\S*(?:一等奖|二等奖|三等奖|金奖|银奖|铜奖|冠军|亚军|季军|省赛|国赛)|省\S*奖|国\S*奖|(?:校级|院级|省级|国家级)\S*奖|蓝桥杯\S*(?:一等奖|二等奖|三等奖|省赛|国赛)|ACM\S*(?:一等奖|二等奖|三等奖)|数学建模\S*(?:一等奖|二等奖|三等奖))/g;
             let aw; while ((aw = awRe.exec(raw)) !== null) { if (!data.awards.includes(aw[0])) data.awards.push(aw[0]); }
 
             // 证书
@@ -1916,8 +1954,8 @@
 
             // 3. 经历丰富度（25分）
             let expScore = 0;
-            const projCount = data.projects.length;
-            const internCount = data.internships.length;
+            const projCount = data.projBlocks.length;
+            const internCount = data.internBlocks.length;
             if (projCount >= 3) expScore += 12;
             else if (projCount >= 2) expScore += 9;
             else if (projCount >= 1) expScore += 6;
@@ -1928,11 +1966,12 @@
 
             // 4. 描述质量（10分）
             let descScore = 0;
-            const hasNumbers = /\d+/.test(data.projects.join('') + data.internships.join(''));
-            const hasActionVerbs = /优化|重构|提升|降低|增加|减少|提升|节省|缩短|达到|覆盖/.test(data.projects.join(''));
+            const allExpText = [...data.projBlocks, ...data.internBlocks].join('');
+            const hasNumbers = /\d+/.test(allExpText);
+            const hasActionVerbs = /优化|重构|提升|降低|增加|减少|节省|缩短|达到|覆盖/.test(allExpText);
             if (hasNumbers) descScore += 5; else addTip('项目描述缺少量化数据，如"提升30%""覆盖200+用户"会让经历更有说服力');
             if (hasActionVerbs) descScore += 3; else addTip('多用结果导向的动词：提升、降低、节省、缩短、覆盖等');
-            if (data.projects.some(p => p.length > 20)) descScore += 2;
+            if (data.projBlocks.some(p => p.length > 30)) descScore += 2;
             addDetail('描述质量', Math.min(descScore, 10), 10, null);
 
             // 5. 亮点加分（10分）
@@ -1940,11 +1979,12 @@
             if (data.awards.length >= 1) bonusScore += 4;
             if (data.certs.length >= 1) bonusScore += 3;
             if (data.courses.length >= 3) bonusScore += 2;
+            if (data.politics) bonusScore += 1;
             if (data.awards.some(a => a.includes('国家'))) bonusScore += 1;
             addDetail('亮点加分', Math.min(bonusScore, 10), 10, null);
 
             // 通用建议（如果没有特定tip）
-            if (data.projects.some(p => p.length < 15)) {
+            if (data.projBlocks.some(p => p.split('\n').length < 2 && p.length < 30)) {
                 addTip('项目描述过于简短，建议展开：做了什么 → 怎么做的 → 结果如何');
             }
             if (score.tips.length === 0) addTip('简历整体不错，注意保持简洁，确保一页A4纸能放下');
@@ -2022,7 +2062,6 @@
             const accent = '#165DFF';
 
             // ====== 兜底：从原始文本提取未识别的技能/经历 ======
-            // 如果技能为空但有"技能："行，直接提取
             if (data.skills.length === 0) {
                 const sl = raw.match(/(?:技能|专业技能|职业技能)[：:]\s*([^\n]+)/i);
                 if (sl) {
@@ -2032,20 +2071,42 @@
                     });
                 }
             }
-            // 如果项目为空但有"经历："行，直接提取
-            if (data.projects.length === 0) {
-                const el = raw.match(/(?:经历|实践经历|实习经历|工作(?:\/项目)经历)[：:]\s*([^\n]+(?:\n[^\n]+){0,3})/i);
+            if (data.internBlocks.length === 0 && data.projBlocks.length === 0) {
+                const el = raw.match(/(?:经历|实践经历|实习经历|工作(?:\/项目)经历)[：:]\s*([^\n]+(?:\n[^\n]+){0,5})/i);
                 if (el) {
                     el[1].split(/[。\n]/).forEach(s => {
                         const t = s.trim().replace(/[。，,；;.\n]$/g,'');
-                        if (t.length > 5 && !data.projects.includes(t)) data.projects.push(t);
+                        if (t.length > 5) data.projBlocks.push(t);
                     });
                 }
             }
 
+            // ====== 辅助函数 ======
+            // 从块文本中提取日期
+            function _extractDate(block) {
+                const m = block.match(/(20\d{2})\s*[.\-—–~～年]\s*\d{1,2}/);
+                return m ? m[1] : '0';
+            }
+            // 从块文本提取第一行（标题行）
+            function _extractTitle(block) {
+                return block.split('\n')[0].trim();
+            }
+            // 从块文本提取描述行（除标题外的所有行）
+            function _extractDesc(block) {
+                const lines = block.split('\n').slice(1).map(l => l.trim()).filter(l => l.length > 2);
+                return lines.join('');
+            }
+            // 按日期倒序排序
+            function _sortByDate(blocks) {
+                return [...blocks].sort((a, b) => _extractDate(b) - _extractDate(a));
+            }
+
             // ====== 个人信息头部 ======
-            const contactLine = [data.phone, data.email].filter(Boolean).join('  |  ');
-            const infoLine = [data.school, data.degree, data.major, data.gradYear ? data.gradYear + '届' : ''].filter(Boolean).join('  ·  ');
+            const contactParts = [data.phone, data.email].filter(Boolean);
+            if (data.politics) contactParts.push(data.politics);
+            const contactLine = contactParts.join('  |  ');
+            const infoParts = [data.school, data.degree, data.major, data.gradYear ? data.gradYear + '届' : ''].filter(Boolean);
+            const infoLine = infoParts.join('  ·  ');
             const headerHtml = `
             <div style="border-bottom:2px solid ${accent};padding-bottom:0.8rem;margin-bottom:1.2rem;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -2086,21 +2147,16 @@
             </div>`;
             }
 
-            // ====== 实习经历 ======
+            // ====== 实习/工作经历（按时间倒序，完整保留描述）======
             let internHtml = '';
-            if (data.internships.length > 0) {
-                const internItems = data.internships.map(co => {
-                    const idx = raw.indexOf(co);
-                    let ctx = '';
-                    if (idx >= 0) {
-                        const start = Math.max(0, idx - 5);
-                        const end = Math.min(raw.length, idx + co.length + 80);
-                        const seg = raw.slice(start, end).split(/[。\n]/)[0];
-                        ctx = seg.length > 10 ? seg.trim() : '';
-                    }
-                    return `<div style="margin-bottom:0.6rem;">
-                        <div style="font-weight:600;color:#333;font-size:0.88rem;">${co}</div>
-                        ${ctx ? `<div style="color:#666;font-size:0.82rem;padding-left:8px;margin-top:0.15rem;">${ctx}</div>` : ''}
+            const sortedInterns = _sortByDate(data.internBlocks);
+            if (sortedInterns.length > 0) {
+                const internItems = sortedInterns.map(block => {
+                    const title = _extractTitle(block);
+                    const desc = _extractDesc(block);
+                    return `<div style="margin-bottom:0.8rem;">
+                        <div style="font-weight:600;color:#333;font-size:0.88rem;">${title}</div>
+                        ${desc ? `<div style="color:#555;font-size:0.84rem;padding-left:8px;margin-top:0.2rem;line-height:1.65;">${desc}</div>` : ''}
                     </div>`;
                 }).join('');
                 internHtml = `
@@ -2110,21 +2166,24 @@
             </div>`;
             }
 
-            // ====== 项目/实践经历 ======
+            // ====== 项目/实践经历（按时间倒序，完整保留描述）======
             let projHtml = '';
-            if (data.projects.length > 0) {
-                const projItems = data.projects.map((p, i) => {
-                    const techMentioned = data.skills.filter(s => p.toLowerCase().includes(s.toLowerCase()));
+            const sortedProjs = _sortByDate(data.projBlocks);
+            if (sortedProjs.length > 0) {
+                const projItems = sortedProjs.map(block => {
+                    const title = _extractTitle(block);
+                    const desc = _extractDesc(block);
+                    const techMentioned = data.skills.filter(s => block.toLowerCase().includes(s.toLowerCase()));
                     const techStr = techMentioned.length ? `涉及：${techMentioned.join('、')}` : '';
-                    const clean = p.replace(/^(独立|主导|负责|参与|完成|作为)\s*/, '');
-                    return `<div style="margin-bottom:0.65rem;">
-                        <div style="font-weight:600;color:#333;font-size:0.88rem;">${clean.length>60 ? clean.slice(0,60)+'...' : clean}</div>
+                    return `<div style="margin-bottom:0.8rem;">
+                        <div style="font-weight:600;color:#333;font-size:0.88rem;">${title.length>80 ? title.slice(0,80)+'...' : title}</div>
+                        ${desc ? `<div style="color:#555;font-size:0.84rem;padding-left:8px;margin-top:0.2rem;line-height:1.65;">${desc}</div>` : ''}
                         ${techStr ? `<div style="color:#999;font-size:0.78rem;padding-left:8px;margin-top:0.1rem;">${techStr}</div>` : ''}
                     </div>`;
                 }).join('');
                 projHtml = `
             <div style="margin-bottom:1rem;">
-                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">实践经历</div>
+                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">项目经历</div>
                 <div style="padding-left:11px;">${projItems}</div>
             </div>`;
             }
@@ -2161,8 +2220,10 @@
                 const topN = data.skills.slice(0, 5).join('、');
                 evalLines.push(`掌握${topN}${data.skills.length>5?'等':''}相关技能`);
             }
-            if (data.projects.length >= 1) evalLines.push(`具备${data.projects.length}段实践经历，能独立完成分配的工作任务`);
-            if (data.internships.length >= 1) evalLines.push(`有${data.internships[0]}等实习/工作经历`);
+            if (data.internBlocks.length >= 1 || data.projBlocks.length >= 1) {
+                evalLines.push(`具备${data.internBlocks.length + data.projBlocks.length}段实践经历，能独立完成分配的工作任务`);
+            }
+            if (data.internBlocks.length >= 1) evalLines.push(`有${_extractTitle(data.internBlocks[0]).split(/\s+/).slice(0,2).join('')}等实习经历`);
             if (data.awards.length >= 1) evalLines.push(`曾获${data.awards[0]}等荣誉`);
             if (evalLines.length < 2) evalLines.push('具备良好的学习能力与团队协作精神，工作态度认真负责');
             evalLines.push('善于自主学习，注重工作规范与细节');
