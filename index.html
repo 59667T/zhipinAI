@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>职配AI - 大学生求职智能决策助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#7B61FF',
+                        success: '#00B42A',
+                        warning: '#FF7D00',
+                        danger: '#F53F3F',
+                        neutral: '#F5F7FA'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .bg-gradient-hero {
+                background: linear-gradient(135deg, #165DFF 0%, #7B61FF 100%);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(22, 93, 255, 0.15);
+            }
+            /* 移动端悬停不生效，保留点击交互 */
+            .typing-indicator span {
+                animation: typing 1.4s infinite ease-in-out;
+            }
+            .typing-indicator span:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+            .typing-indicator span:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+            @keyframes typing {
+                0%, 60%, 100% { transform: translateY(0); }
+                30% { transform: translateY(-5px); }
+            }
+            .fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .slide-up {
+                animation: slideUp 0.3s ease-out;
+            }
+            @keyframes slideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+            .slide-in-right {
+                animation: slideInRight 0.3s ease-out;
+            }
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        }
+    </style>
+</head>
+<body class="font-sans bg-white text-gray-800 antialiased">
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-50 shadow-sm">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="#" class="flex items-center space-x-2" onclick="showPage('home')">
+                <i class="fa fa-connectdevelop text-primary text-2xl"></i>
+                <span class="font-bold text-xl">职配AI</span>
+            </a>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#" class="font-medium hover:text-primary transition-colors nav-link active" data-page="home" onclick="showPage('home')">首页</a>
+                <a href="#" class="font-medium hover:text-primary transition-colors nav-link" data-page="match" onclick="showPage('match')">智能匹配</a>
+                <a href="#" class="font-medium hover:text-primary transition-colors nav-link" data-page="jobs" onclick="showPage('jobs')">职位库</a>
+                <a href="#" class="font-medium hover:text-primary transition-colors nav-link" data-page="optimize" onclick="showPage('optimize')">简历优化</a>
+            </div>
+            <button id="mobileMenuBtn" class="md:hidden text-gray-600 hover:text-primary ml-3">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+            <!-- [FIX-任务7] 一键演示下拉菜单，支持多行业 -->
+            <div class="relative" id="demoBtnWrap">
+                <button id="demoBtn" class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors flex items-center gap-1">
+                    一键演示 <i class="fa fa-caret-down text-xs"></i>
+                </button>
+                <div id="demoDropdown" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+                    <button onclick="runDemo('tech')" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">💻 计算机/前端</button>
+                    <button onclick="runDemo('medical')" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">🏥 医学</button>
+                    <button onclick="runDemo('law')" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">⚖️ 法学</button>
+                    <button onclick="runDemo('arts')" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm">🎨 文博/设计</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 移动端侧边栏菜单 -->
+    <div id="mobileSidebar" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeMobileMenu()"></div>
+        <div class="absolute right-0 top-0 bottom-0 w-64 bg-white shadow-xl transform transition-transform duration-300 translate-x-full" id="mobileSidebarContent">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-8">
+                    <span class="font-bold text-lg">菜单</span>
+                    <button onclick="closeMobileMenu()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <a href="#" class="block py-2 font-medium hover:text-primary transition-colors" onclick="showPage('home');closeMobileMenu();">首页</a>
+                    <a href="#" class="block py-2 font-medium hover:text-primary transition-colors" onclick="showPage('match');closeMobileMenu();">智能匹配</a>
+                    <a href="#" class="block py-2 font-medium hover:text-primary transition-colors" onclick="showPage('jobs');closeMobileMenu();">职位库</a>
+                    <a href="#" class="block py-2 font-medium hover:text-primary transition-colors" onclick="showPage('optimize');closeMobileMenu();">简历优化</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全局状态 -->
+    <script>
+        window.userData = {
+            name: '', school: '', major: '', graduationYear: '2026',
+            intention: '', skills: '', experience: '', location: '', resume: ''
+        };
+        window.currentJob = null;
+        window.jobsData = [];
+        window.jobRadarChartInstance = null;
+        // [FIX-P0] 防抖标志
+        window._matchDebouncing = false;
+        window._homeNavDebouncing = false;
+
+        function loadUserData() {
+            try {
+                const saved = localStorage.getItem('zhipeiUserData');
+                if (saved) Object.assign(window.userData, JSON.parse(saved));
+            } catch(e) { console.warn('LocalStorage读取失败', e); }
+        }
+        function saveUserData() {
+            try {
+                localStorage.setItem('zhipeiUserData', JSON.stringify(window.userData));
+            } catch(e) { console.warn('LocalStorage写入失败', e); }
+        }
+        loadUserData();
+
+        // ============================================================
+        // [FIX-任务2] 全行业同义词库 & 关键词映射表
+        // ============================================================
+        const INDUSTRY_KEYWORDS = {
+            // 计算机/互联网
+            tech: ['计算机','软件','信息','前端','后端','java','python','javascript','js','html','css','react','vue','算法','数据结构','程序','开发','工程','coding','code','web','app','移动端','ios','android','云计算','ai','人工智能','机器学习','深度学习','大数据','网络','通信','电子信息','电信','自动化','控制','嵌入式','物联网','iot','区块链','网络安全','信息安全','数学','统计','应用数学'],
+            // 产品/运营
+            product: ['产品','运营','产品经理','pm','axure','需求','原型','用户研究','增长','数据分析','excel','ppt','项目管理','商业分析'],
+            // 设计
+            design: ['设计','ui','ux','美术','视觉','交互','figma','ps','ai','sketch','illustrator','photoshop','平面','品牌','动效','插画'],
+            // 数据/分析
+            data: ['数据','统计','分析','python','r','sql','hive','spark','tableau','bi','机器学习','挖掘','etl','数仓','大数据'],
+            // 测试/运维
+            qa: ['测试','qa','质量','自动化测试','性能测试','接口测试','运维','linux','docker','k8s','devops','ci/cd'],
+            // 医学/医疗
+            medical: ['医学','医疗','临床','护理','药学','口腔','牙医','眼科','外科','内科','儿科','妇科','病理','影像','康复','检验','公共卫生','卫生','健康','生物医学','基础医学','预防医学','中医','针灸','医院','医生','护士','药剂'],
+            // 法学
+            law: ['法学','法律','法务','律师','司法','法官','检察','合规','知识产权','版权','诉讼','仲裁','行政法','刑法','民法','商法','国际法','公证'],
+            // 文博/历史/文史
+            arts: ['文博','博物馆','历史','文物','考古','档案','文献','图书馆','情报','新闻','传媒','传播','广播','出版','编辑','中文','汉语','文学','写作','文案','影视','广告','公关','策划','市场','品牌'],
+            // 教育
+            edu: ['教育','师范','教师','教学','教育学','班主任','辅导','培训','课程','英语','外语','语言'],
+            // 金融
+            finance: ['金融','财务','会计','审计','税务','银行','证券','投资','基金','保险','风控','cfa','cpa','经济','贸易','商学'],
+            // 管理/行政
+            mgmt: ['管理','行政','人事','hr','招聘','培训','企业管理','工商','mba','运营管理','供应链','物流','采购','项目管理'],
+            // 制造/工程
+            manu: ['机械','制造','工程','化工','材料','建筑','土木','能源','环境','矿业','冶金','纺织','食品','农业','物理','化学'],
+        };
+
+        // 行业 → 岗位ID列表（岗位库对应分类）
+        const INDUSTRY_JOB_MAP = {
+            tech:    [1,2,3,4,5,6,7,8,9,10],
+            product: [11,12,13,14,15,36,44],
+            design:  [16,17,18,19,20],
+            data:    [21,22],
+            qa:      [23,24,25],
+            medical: [26,27,28,29,30],
+            law:     [31,32,33],
+            arts:    [34,35,36],
+            edu:     [37,38],
+            finance: [39,40,41],
+            mgmt:    [42,43,44],
+            manu:    [45,46,47],
+        };
+
+        /**
+         * [FIX-P0] 根据用户输入判断所属行业
+         * @param {string} major - 专业
+         * @param {string} intention - 求职意向
+         * @param {string} skills - 技能
+         * @returns {string[]} 匹配到的行业列表（可多个）
+         */
+        function detectIndustries(major, intention, skills) {
+            const text = (major + ' ' + intention + ' ' + skills).toLowerCase();
+            const matched = [];
+            for (const [industry, keywords] of Object.entries(INDUSTRY_KEYWORDS)) {
+                for (const kw of keywords) {
+                    if (text.includes(kw)) {
+                        if (!matched.includes(industry)) matched.push(industry);
+                        break;
+                    }
+                }
+            }
+            return matched.length > 0 ? matched : ['tech']; // 兜底通用
+        }
+
+        /**
+         * [FIX-P0] 核心：真实加权匹配算法
+         * 对每个岗位计算真实分数（0~100），综合5维度：
+         *   - 意向/行业匹配（35分）：完全匹配+35，弱相关+15，不相关+0
+         *   - 技能关键词命中（30分）：按命中率线性
+         *   - 专业相关度（15分）
+         *   - 应届生友好度（10分）：应届岗+10，非应届-5
+         *   - 经历加分（10分）：实习/项目关键词
+         */
+        function calcJobScore(job, userData) {
+            const major = (userData.major || '').toLowerCase();
+            const intention = (userData.intention || '').toLowerCase();
+            const skills = (userData.skills || '').toLowerCase();
+            const experience = (userData.experience || '').toLowerCase();
+            const gradYear = parseInt(userData.graduationYear) || 2026;
+            const isFresh = gradYear >= 2025; // 应届生
+
+            // 判断用户所属行业
+            const userIndustries = detectIndustries(major, intention, skills);
+
+            // 判断岗位所属行业
+            let jobIndustry = 'tech';
+            for (const [ind, ids] of Object.entries(INDUSTRY_JOB_MAP)) {
+                if (ids.includes(job.id)) { jobIndustry = ind; break; }
+            }
+            // 兜底：从岗位 tags/title 判断
+            const jobText = (job.title + ' ' + (job.tags || []).join(' ')).toLowerCase();
+            for (const [ind, kws] of Object.entries(INDUSTRY_KEYWORDS)) {
+                for (const kw of kws) {
+                    if (jobText.includes(kw)) { jobIndustry = ind; break; }
+                }
+            }
+
+            // ---- 维度1：行业/意向匹配（35分）----
+            let intentionScore = 0;
+            if (userIndustries.includes(jobIndustry)) {
+                intentionScore = 35; // 完全匹配
+            } else {
+                // 语义近似：判断意向文字是否直接命中岗位名称
+                const intentionWords = intention.split(/[\s,，、\/]+/).filter(Boolean);
+                for (const w of intentionWords) {
+                    if (w.length >= 2 && (job.title.toLowerCase().includes(w) || jobText.includes(w))) {
+                        intentionScore = Math.max(intentionScore, 28); // 近义词加分
+                    }
+                }
+                if (intentionScore === 0) {
+                    // 弱相关判断：同大类（如tech↔data、tech↔qa）
+                    const weakLinks = {
+                        tech: ['data','qa','mgmt'], data: ['tech','qa'], qa: ['tech','data'],
+                        product: ['mgmt','data','arts'], design: ['arts','product'],
+                        medical: ['edu','mgmt'], law: ['mgmt','finance'], finance: ['mgmt','data'],
+                        arts: ['edu','product','design'], edu: ['mgmt'], mgmt: ['finance','data']
+                    };
+                    const relatedInds = weakLinks[jobIndustry] || [];
+                    if (userIndustries.some(ui => relatedInds.includes(ui))) {
+                        intentionScore = 15; // 弱相关
+                    } else {
+                        intentionScore = 0; // 完全不相关（梯度扣分：基准分不加）
+                    }
+                }
+            }
+
+            // ---- 维度2：技能命中（30分）----
+            const jobTags = (job.tags || []).map(t => t.toLowerCase());
+            let skillHits = 0;
+            for (const tag of jobTags) {
+                if (skills.includes(tag) || major.includes(tag) || intention.includes(tag)) skillHits++;
+            }
+            const skillScore = jobTags.length > 0 ? Math.round((skillHits / jobTags.length) * 30) : 15;
+
+            // ---- 维度3：专业相关度（15分）----
+            let majorScore = 0;
+            const majorIndustries = detectIndustries(major, '', '');
+            if (majorIndustries.includes(jobIndustry)) {
+                majorScore = 15;
+            } else {
+                const weakLinks2 = {
+                    tech: ['data','qa'], data: ['tech'], qa: ['tech'],
+                    product: ['mgmt','data'], design: ['arts'],
+                    medical: [], law: ['mgmt'], finance: ['mgmt','data'],
+                };
+                const related2 = weakLinks2[jobIndustry] || [];
+                if (majorIndustries.some(mi => related2.includes(mi))) majorScore = 8;
+                else majorScore = 3;
+            }
+
+            // ---- 维度4：应届友好（10分）----
+            let freshScore = 0;
+            const jobTitle = job.title.toLowerCase();
+            if (isFresh) {
+                if (jobTitle.includes('校招') || jobTitle.includes('应届') || jobTitle.includes('实习')) {
+                    freshScore = 10;
+                } else {
+                    freshScore = 5; // 社招也允许
+                }
+            } else {
+                freshScore = 8; // 往届生基础分
+            }
+
+            // ---- 维度5：经历加分（10分）----
+            let expScore = 0;
+            const expWords = experience.split(/[\s，,。；;]+/).filter(w => w.length >= 2);
+            let expHits = 0;
+            for (const w of expWords) {
+                if (jobText.includes(w) || w.includes('实习') || w.includes('项目') || w.includes('开发') || w.includes('参与')) expHits++;
+            }
+            expScore = Math.min(10, expHits * 2);
+            // 应届生：实习/校园项目等价工作经验
+            if (isFresh && (experience.includes('实习') || experience.includes('项目') || experience.includes('训练营'))) {
+                expScore = Math.max(expScore, 8);
+            }
+
+            // ---- 汇总 & 钳位 ----
+            let total = intentionScore + skillScore + majorScore + freshScore + expScore;
+            total = Math.max(0, Math.min(100, total)); // 钳位到 0~100
+
+            // ---- 计算雷达图6维数据（动态）----
+            const radarData = [
+                Math.min(100, skillScore * 3 + (majorScore > 10 ? 10 : 0)),   // 硬技能
+                Math.min(100, 50 + (isFresh ? 10 : 20) + (expScore > 5 ? 10 : 0)), // 软技能
+                Math.min(100, expScore * 6 + (isFresh && (experience.includes('实习')||experience.includes('项目')) ? 30 : 10)), // 经验
+                Math.min(100, majorScore * 5 + 20),   // 学历/专业
+                Math.min(100, freshScore * 8),         // 应届适配
+                Math.min(100, intentionScore * 2 + 10) // 意向匹配
+            ];
+
+            return { score: Math.round(total), radarData };
+        }
+
+        /**
+         * [FIX-P0] 根据分数生成动态匹配分析文字
+         */
+        function buildMatchDetails(job, userData, score) {
+            const major = userData.major || '';
+            const intention = userData.intention || '';
+            const skills = userData.skills || '';
+            const gradYear = parseInt(userData.graduationYear) || 2026;
+            const isFresh = gradYear >= 2025;
+            const jobTags = job.tags || [];
+
+            // 命中的技能
+            const hitTags = jobTags.filter(t => skills.toLowerCase().includes(t.toLowerCase()));
+            const missTags = jobTags.filter(t => !skills.toLowerCase().includes(t.toLowerCase()));
+
+            const lines = [];
+
+            if (score >= 70) {
+                lines.push({ icon: 'check-circle', color: 'success', text: `意向「${intention || major}」与岗位高度匹配` });
+            } else if (score >= 45) {
+                lines.push({ icon: 'exclamation-circle', color: 'warning', text: `意向与岗位存在一定差距，建议补充相关技能` });
+            } else {
+                lines.push({ icon: 'times-circle', color: 'danger', text: `专业/意向与本岗位关联较低，建议优先匹配同行业岗位` });
+            }
+
+            if (hitTags.length > 0) {
+                lines.push({ icon: 'check-circle', color: 'success', text: `已掌握技能：${hitTags.join('、')}` });
+            }
+            if (missTags.length > 0) {
+                lines.push({ icon: 'exclamation-circle', color: 'warning', text: `建议补充：${missTags.join('、')}` });
+            }
+            if (isFresh) {
+                lines.push({ icon: 'info-circle', color: 'primary', text: '应届生身份，岗位经验要求已适当降低' });
+            }
+
+            return lines.map(l => `
+                <div class="flex items-center gap-2">
+                    <i class="fa fa-${l.icon} text-${l.color}"></i>
+                    <span>${l.text}</span>
+                </div>`).join('');
+        }
+    </script>
+
+    <!-- 首页 -->
+    <div id="homePage" class="page active">
+        <section class="pt-24 pb-16 bg-gradient-hero text-white">
+            <div class="container mx-auto px-4 text-center">
+                <h1 class="text-[clamp(2rem,5vw,3.5rem)] font-bold mb-4">大学生求职智能决策助手</h1>
+                <p class="text-[clamp(1rem,2vw,1.25rem)] max-w-2xl mx-auto mb-8 text-white/90">
+                    AI驱动的个性化求职方案，帮你精准匹配岗位，优化简历，轻松拿到心仪offer
+                </p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4 mb-16">
+                    <!-- [FIX-任务6] 首页跳转防抖 -->
+                    <button onclick="safeShowPage('match')" class="px-8 py-3 bg-white text-primary font-medium rounded-lg hover:bg-gray-100 shadow-lg">
+                        开始智能匹配
+                    </button>
+                    <button onclick="safeShowPage('jobs')" class="px-8 py-3 bg-white/10 text-white font-medium rounded-lg border border-white/30 hover:bg-white/20">
+                        浏览职位库
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+                        <div class="text-3xl font-bold mb-2">12+</div>
+                        <div class="text-white/80">主流行业覆盖</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+                        <div class="text-3xl font-bold mb-2">秒级</div>
+                        <div class="text-white/80">JD智能解析</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+                        <div class="text-3xl font-bold mb-2">6维</div>
+                        <div class="text-white/80">能力匹配模型</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+                        <div class="text-3xl font-bold mb-2">即得</div>
+                        <div class="text-white/80">可复制优化建议</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="py-16 bg-neutral">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl md:text-3xl font-bold text-center mb-12">核心功能</h2>
+                <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <div class="bg-white rounded-xl p-6 shadow-sm card-hover cursor-pointer" onclick="safeShowPage('match')">
+                        <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+                            <i class="fa fa-bullseye text-primary text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-3">智能岗位匹配</h3>
+                        <p class="text-gray-600">基于你的技能、经验和意向，通过加权算法精准匹配岗位，生成可视化雷达图。</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm card-hover cursor-pointer" onclick="safeShowPage('optimize')">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                            <i class="fa fa-file-text-o text-green-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-3">AI简历优化</h3>
+                        <p class="text-gray-600">上传简历内容，AI针对性润色、突出亮点，生成可直接投递版本。</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm card-hover cursor-pointer" onclick="document.getElementById('chatToggle').click()">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                            <i class="fa fa-robot text-purple-600 text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-3">AI求职助手</h3>
+                        <p class="text-gray-600">7×24解答求职、面试、薪资相关问题，依托知识库给出专业建议。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 智能匹配页面 -->
+    <div id="matchPage" class="page hidden pt-24 pb-16">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl font-bold text-center mb-8">智能岗位匹配</h1>
+            <div class="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-xl font-semibold mb-6">个人信息</h2>
+                    <form id="matchForm" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <!-- [FIX-任务3] 必填标星 -->
+                                <label class="block text-sm font-medium text-gray-700 mb-1">姓名 <span class="text-red-500">*</span></label>
+                                <input type="text" id="userName" placeholder="请输入姓名" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">学校</label>
+                                <input type="text" id="userSchool" placeholder="请输入学校" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">专业 <span class="text-red-500">*</span></label>
+                                <input type="text" id="userMajor" placeholder="如：计算机科学" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">毕业年份</label>
+                                <!-- [FIX-任务3] 毕业年份动态生成，覆盖往届+未来届 -->
+                                <select id="userGraduation" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20">
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">求职意向 <span class="text-red-500">*</span></label>
+                            <input type="text" id="userIntention" placeholder="如：前端开发，可多个意向用逗号分隔" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            <!-- [FIX-任务3] 快捷意向标签 -->
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                <span class="text-xs text-gray-400">快速填写：</span>
+                                <button type="button" onclick="quickTag('前端开发')" class="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100">前端开发</button>
+                                <button type="button" onclick="quickTag('Java后端')" class="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100">Java后端</button>
+                                <button type="button" onclick="quickTag('产品经理')" class="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100">产品经理</button>
+                                <button type="button" onclick="quickTag('UI设计')" class="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100">UI设计</button>
+                                <button type="button" onclick="quickTag('数据分析')" class="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100">数据分析</button>
+                                <button type="button" onclick="quickTag('测试工程师')" class="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100">测试工程师</button>
+                                <button type="button" onclick="quickTag('医疗健康')" class="px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100">医疗健康</button>
+                                <button type="button" onclick="quickTag('法律法务')" class="px-2 py-0.5 text-xs bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100">法律法务</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">技能特长</label>
+                            <textarea id="userSkills" rows="2" maxlength="300" placeholder="如：HTML, CSS, JavaScript, Python（300字以内）" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"></textarea>
+                            <div class="text-right text-xs text-gray-400 mt-1"><span id="skillsCount">0</span>/300</div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">项目/实习经历</label>
+                            <textarea id="userExperience" rows="3" maxlength="500" placeholder="如：参与XX公司实习，负责XX功能开发（500字以内）" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"></textarea>
+                            <div class="text-right text-xs text-gray-400 mt-1"><span id="expCount">0</span>/500</div>
+                        </div>
+                        <div class="flex space-x-4 pt-2">
+                            <button type="button" onclick="resetMatchForm()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">重置表单</button>
+                            <!-- [FIX-P1] 防抖按钮 -->
+                            <button type="button" id="startMatchBtn" onclick="startMatch()" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">开始智能匹配</button>
+                        </div>
+                    </form>
+                </div>
+                <div>
+                    <div id="matchEmpty" class="bg-white rounded-xl shadow-sm p-6 h-full flex flex-col items-center justify-center text-center">
+                        <i class="fa fa-search text-gray-300 text-6xl mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">暂无匹配结果</h3>
+                        <p class="text-gray-400 text-sm mb-4">填写左侧信息后点击开始匹配</p>
+                        <button onclick="fillDemoData('tech')" class="px-4 py-2 text-primary border border-primary rounded-lg hover:bg-primary/5">填充示例数据（前端）</button>
+                    </div>
+                    <div id="matchResult" class="hidden space-y-6">
+                        <div class="bg-white rounded-xl shadow-sm p-6 fade-in">
+                            <h3 class="text-xl font-semibold mb-4">为你推荐的岗位</h3>
+                            <p class="text-xs text-gray-400 mb-3">基于你的专业、意向、技能综合匹配 · 已从完整职位库中筛选</p>
+                            <div id="recommendedJobs" class="space-y-4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 职位库页面 -->
+    <div id="jobsPage" class="page hidden pt-24 pb-16">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl font-bold text-center mb-8">热门职位库</h1>
+            <div class="bg-white rounded-xl shadow-sm p-4 mb-6 max-w-6xl mx-auto">
+                <div class="flex flex-wrap gap-4">
+                    <select id="filterIndustry" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[44px]">
+                        <option value="">全部行业</option>
+                        <option value="互联网">互联网/计算机</option>
+                        <option value="产品">产品/运营</option>
+                        <option value="设计">设计</option>
+                        <option value="数据">数据分析</option>
+                        <option value="测试">测试/运维</option>
+                        <option value="医疗">医疗健康</option>
+                        <option value="法学">法学/法务</option>
+                        <option value="文博">文博/传媒</option>
+                        <option value="教育">教育</option>
+                        <option value="金融/财务">金融/财务</option>
+                        <option value="管理">管理/行政</option>
+                        <option value="制造业">制造/工程</option>
+                    </select>
+                    <select id="filterLocation" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[44px]">
+                        <option value="">全部城市</option>
+                        <option value="北京">北京</option>
+                        <option value="上海">上海</option>
+                        <option value="深圳">深圳</option>
+                        <option value="杭州">杭州</option>
+                        <option value="广州">广州</option>
+                    </select>
+                    <select id="filterSalary" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[44px]">
+                        <option value="">全部薪资</option>
+                        <option value="low">15K以下/200天以下</option>
+                        <option value="mid">15K-25K</option>
+                        <option value="high">25K以上</option>
+                    </select>
+                    <input type="text" id="filterKeyword" placeholder="搜索职位关键词" class="flex-1 min-w-[120px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[44px]">
+                    <!-- [FIX-任务6] 过滤按钮防抖 -->
+                    <button onclick="filterJobs()" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 min-h-[44px]">搜索</button>
+                </div>
+            </div>
+            <div id="jobsListWrap" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                <div id="jobsList" class="contents"></div>
+            </div>
+            <!-- [FIX-任务5] 悬停面板改为点击触发，适配移动端 -->
+            <div id="jobSidePanel" class="fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-white shadow-2xl z-40 transform translate-x-full transition-all duration-500 ease-out overflow-y-auto" style="top:64px">
+                <div class="p-5 sm:p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="sidePanelTitle" class="text-lg sm:text-xl font-bold pr-4"></h3>
+                        <button onclick="closeJobSidePanel()" class="text-gray-400 hover:text-gray-600 w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 flex-shrink-0 min-w-[36px]"><i class="fa fa-times text-lg"></i></button>
+                    </div>
+                    <p id="sidePanelCompany" class="text-gray-600 mb-1"></p>
+                    <p id="sidePanelSalary" class="text-primary font-medium mb-4"></p>
+                    <div class="mb-4">
+                        <h4 class="font-semibold mb-2">技能标签</h4>
+                        <div id="sidePanelTags" class="flex flex-wrap gap-1"></div>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="font-semibold mb-2">岗位优势</h4>
+                        <ul id="sidePanelPros" class="text-gray-600 space-y-1"></ul>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="font-semibold mb-2">岗位不足</h4>
+                        <ul id="sidePanelCons" class="text-gray-600 space-y-1"></ul>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="font-semibold mb-2">高频面试题</h4>
+                        <div id="sidePanelQuestions" class="space-y-2 text-gray-600"></div>
+                    </div>
+                    <button id="sidePanelDetailBtn" class="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 min-h-[44px]">查看完整匹配分析</button>
+                </div>
+            </div>
+            <!-- 遮罩（移动端） -->
+            <div id="sidePanelOverlay" class="fixed inset-0 bg-black/30 z-30 hidden sm:hidden" onclick="closeJobSidePanel()"></div>
+        </div>
+    </div>
+
+    <!-- 简历优化页面 -->
+    <div id="optimizePage" class="page hidden pt-24 pb-16">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl font-bold text-center mb-2">AI简历优化</h1>
+            <p class="text-center text-gray-500 mb-8">智能诊断 → 针对性优化 → 专业级输出</p>
+
+            <div class="max-w-6xl mx-auto">
+                <!-- 上方：输入区 + 诊断评分 -->
+                <div class="grid md:grid-cols-5 gap-6 mb-6">
+                    <!-- 输入区（3列宽） -->
+                    <div class="md:col-span-3 bg-white rounded-xl shadow-sm p-6">
+                        <h2 class="text-lg font-semibold mb-4">粘贴你的简历</h2>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">目标职位（选填，用于针对性优化）</label>
+                            <input type="text" id="targetJob" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="如：前端开发工程师">
+                        </div>
+                        <div class="mb-3">
+                            <textarea id="originalResume" rows="12" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm leading-relaxed" placeholder="将你的简历内容粘贴到这里（越详细优化效果越好）&#10;&#10;建议包含：姓名、联系方式、学校/专业、技能、项目经历、实习经历、荣誉奖项"></textarea>
+                        </div>
+                        <div class="flex space-x-3 flex-wrap gap-y-2">
+                            <button onclick="loadMyResume()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 min-h-[44px] text-sm">导入我的信息</button>
+                            <button onclick="fillDemoResume()" class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 min-h-[44px] text-sm">查看示例</button>
+                            <button onclick="analyzeResume('diagnose')" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 min-h-[44px] text-sm font-medium">简历诊断</button>
+                            <button onclick="analyzeResume('optimize')" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 min-h-[44px] text-sm font-medium">一键优化</button>
+                        </div>
+                    </div>
+                    <!-- 诊断评分区（2列宽） -->
+                    <div class="md:col-span-2 space-y-4">
+                        <div id="scorePanel" class="bg-white rounded-xl shadow-sm p-6">
+                            <h2 class="text-lg font-semibold mb-4">简历诊断</h2>
+                            <div id="scoreEmpty" class="text-center py-8">
+                                <i class="fa fa-stethoscope text-gray-200 text-5xl mb-3"></i>
+                                <p class="text-gray-400 text-sm">点击"开始优化"后<br>这里会显示诊断结果</p>
+                            </div>
+                            <div id="scoreContent" class="hidden"></div>
+                        </div>
+                        <div id="tipsPanel" class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 hidden">
+                            <h3 class="font-semibold text-amber-800 text-sm mb-2 flex items-center gap-1"><i class="fa fa-lightbulb"></i> 优化建议</h3>
+                            <ul id="tipsList" class="text-sm text-amber-700 space-y-1 list-disc list-inside"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 下方：优化结果 -->
+                <div id="optimizeEmpty" class="bg-white rounded-xl shadow-sm p-12 text-center">
+                    <i class="fa fa-magic text-gray-200 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-semibold text-gray-500 mb-2">优化后的简历将在这里展示</h3>
+                    <p class="text-gray-400 text-sm">支持一键复制或导出PDF</p>
+                </div>
+                <div id="optimizeResult" class="hidden bg-white rounded-xl shadow-sm fade-in">
+                    <div class="flex justify-between items-center px-6 py-3 border-b">
+                        <h2 class="text-lg font-semibold">优化后简历</h2>
+                        <div class="flex space-x-2">
+                            <button onclick="copyOptimizedResume()" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-1 min-h-[36px] text-sm">
+                                <i class="fa fa-copy"></i><span>复制文本</span>
+                            </button>
+                            <button onclick="exportResumePDF()" class="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center gap-1 min-h-[36px] text-sm">
+                                <i class="fa fa-download"></i><span>导出PDF</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="optimizedResumeContent" class="p-6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 职位详情弹窗（含雷达图） -->
+    <div id="jobDetailModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-start justify-center p-2 sm:p-4 overflow-y-auto">
+        <div class="bg-white rounded-xl w-full max-w-2xl my-4 sm:my-8 slide-up">
+            <div class="p-4 sm:p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <button onclick="closeJobModal()" class="text-gray-400 hover:text-gray-600 w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 flex-shrink-0 min-w-[36px]" title="返回">
+                            <i class="fa fa-arrow-left text-lg"></i>
+                        </button>
+                        <div class="min-w-0">
+                            <h2 id="modalJobTitle" class="text-xl sm:text-2xl font-bold truncate"></h2>
+                            <p id="modalJobCompany" class="text-gray-600"></p>
+                        </div>
+                    </div>
+                    <button onclick="closeJobModal()" class="text-gray-400 hover:text-gray-600 w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 flex-shrink-0 min-w-[36px]">
+                        <i class="fa fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span id="modalJobSalary" class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium"></span>
+                    <span id="modalJobLocation" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"></span>
+                    <span id="modalJobType" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"></span>
+                    <span id="modalJobMatch" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium"></span>
+                </div>
+                <div id="modalJobTags" class="flex flex-wrap gap-2 mb-6"></div>
+                <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">简历匹配度分析</h3>
+                    <div class="h-64">
+                        <canvas id="jobRadarChart" role="img" aria-label="岗位匹配雷达图">匹配度雷达图</canvas>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-2">详细匹配情况</h3>
+                    <div id="modalMatchDetails" class="space-y-2"></div>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-2">岗位职责</h3>
+                    <p id="modalJobDescription" class="text-gray-600 whitespace-pre-line"></p>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-2">任职要求</h3>
+                    <p id="modalJobRequirements" class="text-gray-600 whitespace-pre-line"></p>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-2">面试高频题</h3>
+                    <div id="modalInterviewQuestions" class="space-y-2 text-gray-600"></div>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="showPage('optimize');closeJobModal();" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 min-h-[44px]">优化简历投递</button>
+                    <button onclick="closeJobModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 min-h-[44px]">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI聊天悬浮框 -->
+    <button id="chatToggle" class="fixed bottom-6 right-6 w-14 h-14 bg-primary rounded-full flex items-center justify-center shadow-lg hover:bg-primary/90 z-40 min-w-[56px] min-h-[56px]">
+        <i class="fa fa-comments text-white text-xl"></i>
+    </button>
+    <div id="chatWindow" class="fixed bottom-24 right-6 w-[90vw] max-w-[380px] h-[500px] bg-white rounded-xl shadow-2xl flex flex-col z-50 transform scale-0 origin-bottom-right transition-transform duration-300">
+        <div class="bg-gradient-to-r from-primary to-secondary text-white p-4 rounded-t-xl flex justify-between items-center">
+            <h3 class="font-semibold">职配AI求职助手</h3>
+            <div class="flex space-x-2">
+                <!-- [FIX-P1] chatMinimize 绑定修正 -->
+                <button id="chatMinimize" class="hover:bg-white/20 w-8 h-8 rounded flex items-center justify-center min-w-[32px]"><i class="fa fa-minus"></i></button>
+                <button id="chatClose" class="hover:bg-white/20 w-8 h-8 rounded flex items-center justify-center min-w-[32px]"><i class="fa fa-times"></i></button>
+            </div>
+        </div>
+        <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
+            <div class="flex justify-start">
+                <div class="bg-gray-100 rounded-lg rounded-tl-none px-4 py-3 max-w-[80%]">你好！我是职配AI求职助手，请问有什么求职问题可以帮你？</div>
+            </div>
+        </div>
+        <div class="px-4 pb-2 flex flex-wrap gap-2">
+            <button class="quick-question px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200">这个岗位面试会问什么？</button>
+            <button class="quick-question px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200">简历怎么优化？</button>
+            <button class="quick-question px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200">应届生薪资参考</button>
+        </div>
+        <div class="p-4 border-t">
+            <div class="flex space-x-2">
+                <input id="chatInput" type="text" placeholder="输入问题..." class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <button id="sendBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 min-w-[44px] min-h-[44px]"><i class="fa fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-900 text-white/70 py-8 mt-16">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2026 职配AI · 大学生求职智能决策助手</p>
+            <p class="text-sm mt-2">本系统仅供学习参考，求职请以企业官方信息为准</p>
+        </div>
+    </footer>
+
+    <script>
+        // ============================================================
+        // [FIX-P2] 页面切换逻辑（修复 homePage 逻辑不对称问题）
+        // ============================================================
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => {
+                p.classList.add('hidden');
+                p.classList.remove('active');
+            });
+            const target = document.getElementById(pageName + 'Page');
+            if (target) {
+                target.classList.remove('hidden');
+                target.classList.add('active');
+            }
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active', 'text-primary');
+                if (link.dataset.page === pageName) link.classList.add('active', 'text-primary');
+            });
+            // 推入历史栈，支持多级返回
+            if (history.state && history.state.page !== pageName) {
+                history.pushState({ page: pageName }, '', '#' + pageName);
+            }
+            if (pageName === 'jobs') initJobsList();
+            if (pageName === 'match') loadFormData();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            closeJobSidePanel();
+            closeDemoDropdown();
+        }
+
+        // [FIX-任务6] 首页跳转防抖
+        function safeShowPage(page) {
+            if (window._homeNavDebouncing) return;
+            window._homeNavDebouncing = true;
+            showPage(page);
+            setTimeout(() => { window._homeNavDebouncing = false; }, 600);
+        }
+
+        // 浏览器返回键支持
+        window.addEventListener('popstate', e => {
+            if (e.state && e.state.page) showPage(e.state.page);
+        });
+        history.replaceState({ page: 'home' }, '', '#home');
+
+        // ============================================================
+        // [FIX-任务3] 毕业年份下拉动态生成
+        // ============================================================
+        (function buildGradSelect() {
+            const sel = document.getElementById('userGraduation');
+            if (!sel) return;
+            const currentYear = new Date().getFullYear();
+            for (let y = currentYear - 5; y <= currentYear + 4; y++) {
+                const opt = document.createElement('option');
+                opt.value = String(y);
+                opt.textContent = y + '届' + (y === currentYear ? '（应届）' : y < currentYear ? '（往届）' : '');
+                if (y === currentYear) opt.selected = true;
+                sel.appendChild(opt);
+            }
+        })();
+
+        // ============================================================
+        // 表单读写
+        // ============================================================
+        function loadFormData() {
+            document.getElementById('userName').value = window.userData.name || '';
+            document.getElementById('userSchool').value = window.userData.school || '';
+            document.getElementById('userMajor').value = window.userData.major || '';
+            const gradSel = document.getElementById('userGraduation');
+            if (window.userData.graduationYear) gradSel.value = window.userData.graduationYear;
+            document.getElementById('userIntention').value = window.userData.intention || '';
+            document.getElementById('userSkills').value = window.userData.skills || '';
+            document.getElementById('userExperience').value = window.userData.experience || '';
+            updateCharCount();
+        }
+
+        // [FIX-任务3] 实时字数统计
+        function updateCharCount() {
+            const s = document.getElementById('userSkills');
+            const e = document.getElementById('userExperience');
+            if (s) document.getElementById('skillsCount').textContent = s.value.length;
+            if (e) document.getElementById('expCount').textContent = e.value.length;
+        }
+        document.getElementById('userSkills').addEventListener('input', updateCharCount);
+        document.getElementById('userExperience').addEventListener('input', updateCharCount);
+
+        // [FIX-任务3] 输入自动清洗（全角→半角，首尾空格）
+        function cleanInput(val) {
+            let cleaned = val
+                .replace(/[\uff01-\uff5e]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+                .replace(/\u3000/g, ' ')
+                .trim();
+            // 去除首尾逗号、顿号等分隔符
+            cleaned = cleaned.replace(/^[,，、\s]+/, '').replace(/[,，、\s]+$/, '');
+            return cleaned;
+        }
+
+        function saveFormData() {
+            window.userData.name = cleanInput(document.getElementById('userName').value);
+            window.userData.school = cleanInput(document.getElementById('userSchool').value);
+            window.userData.major = cleanInput(document.getElementById('userMajor').value);
+            window.userData.graduationYear = document.getElementById('userGraduation').value;
+            window.userData.intention = cleanInput(document.getElementById('userIntention').value);
+            window.userData.skills = cleanInput(document.getElementById('userSkills').value);
+            window.userData.experience = cleanInput(document.getElementById('userExperience').value);
+            saveUserData();
+        }
+
+        function resetMatchForm() {
+            document.getElementById('matchForm').reset();
+            updateCharCount();
+            document.getElementById('matchEmpty').classList.remove('hidden');
+            document.getElementById('matchResult').classList.add('hidden');
+        }
+
+        // [FIX-任务3] 快捷意向标签
+        function quickTag(tag) {
+            const el = document.getElementById('userIntention');
+            let cur = cleanInput(el.value); // 先清洗
+            if (!cur) {
+                el.value = tag;
+            } else if (!cur.includes(tag)) {
+                el.value = cur + ',' + tag;
+            }
+        }
+
+        // ============================================================
+        // 演示数据（多行业）
+        // ============================================================
+        const DEMO_PROFILES = {
+            tech: {
+                name: '张三', school: '浙江大学', major: '计算机科学与技术',
+                graduation: String(new Date().getFullYear()),
+                intention: '前端开发,Web开发',
+                skills: 'HTML, CSS, JavaScript, React, Python, MySQL',
+                experience: '参与腾讯AI训练营，独立开发个人博客网站，负责前端页面设计和交互实现'
+            },
+            medical: {
+                name: '李四', school: '哈尔滨医科大学', major: '口腔医学',
+                graduation: String(new Date().getFullYear()),
+                intention: '牙医,口腔医生',
+                skills: '口腔检查, 牙体牙髓, 正畸基础, 医患沟通',
+                experience: '在附属医院实习6个月，参与口腔门诊接诊，完成龋齿填充等基础操作'
+            },
+            law: {
+                name: '王五', school: '中国政法大学', major: '法学',
+                graduation: String(new Date().getFullYear()),
+                intention: '法务助理,合规专员',
+                skills: '合同审查, 法律检索, 诉讼文书, Word, Excel',
+                experience: '在律所实习3个月，协助律师整理案件材料，参与合同合规审查'
+            },
+            arts: {
+                name: '赵六', school: '北京师范大学', major: '历史学',
+                graduation: String(new Date().getFullYear()),
+                intention: '文博策展,文案编辑',
+                skills: 'Photoshop, 文案写作, 内容策划, PPT',
+                experience: '在博物馆志愿服务，参与展览内容撰写，完成多篇历史科普文章创作'
+            }
+        };
+
+        function fillDemoData(type) {
+            const profile = DEMO_PROFILES[type] || DEMO_PROFILES.tech;
+            document.getElementById('userName').value = profile.name;
+            document.getElementById('userSchool').value = profile.school;
+            document.getElementById('userMajor').value = profile.major;
+            document.getElementById('userGraduation').value = profile.graduation;
+            document.getElementById('userIntention').value = profile.intention;
+            document.getElementById('userSkills').value = profile.skills;
+            document.getElementById('userExperience').value = profile.experience;
+            updateCharCount();
+            saveFormData();
+            startMatch();
+        }
+
+        // ============================================================
+        // [FIX-P0] 开始匹配：防抖 + 必填校验
+        // ============================================================
+        function startMatch() {
+            // 防抖
+            if (window._matchDebouncing) return;
+
+            // [FIX-任务3] 必填校验
+            const name = cleanInput(document.getElementById('userName').value);
+            const major = cleanInput(document.getElementById('userMajor').value);
+            const intention = cleanInput(document.getElementById('userIntention').value);
+            if (!name) { showToast('请填写姓名'); document.getElementById('userName').focus(); return; }
+            if (!major) { showToast('请填写专业'); document.getElementById('userMajor').focus(); return; }
+            if (!intention) { showToast('请填写求职意向'); document.getElementById('userIntention').focus(); return; }
+
+            saveFormData();
+
+            window._matchDebouncing = true;
+            const btn = document.getElementById('startMatchBtn');
+            btn.disabled = true;
+            btn.textContent = '匹配中...';
+
+            document.getElementById('matchEmpty').classList.add('hidden');
+            document.getElementById('matchResult').classList.remove('hidden');
+            generateRecommendedJobs();
+
+            setTimeout(() => {
+                window._matchDebouncing = false;
+                btn.disabled = false;
+                btn.textContent = '开始智能匹配';
+            }, 1000);
+        }
+
+        // 轻量提示
+        function showToast(msg) {
+            let t = document.getElementById('toastMsg');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'toastMsg';
+                t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:8px;z-index:9999;font-size:14px;transition:opacity .3s';
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            t.style.opacity = '1';
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2000);
+        }
+
+        // ============================================================
+        // [FIX-P0] 真实匹配算法：从完整岗位库中动态计算分数推荐
+        // ============================================================
+        function generateRecommendedJobs() {
+            // 确保完整 allJobs 数据已加载
+            if (!window.allJobsCache) initJobsList(true); // 静默初始化职位库
+
+            const container = document.getElementById('recommendedJobs');
+            container.innerHTML = '';
+
+            const ud = window.userData;
+
+            // 对每个岗位计算真实分数
+            const scored = window.allJobsCache.map(job => {
+                const result = calcJobScore(job, ud);
+                return { ...job, matchScore: result.score, radarData: result.radarData };
+            });
+
+            // 按分数降序，取 Top5
+            scored.sort((a, b) => b.matchScore - a.matchScore);
+            const top = scored.slice(0, 5);
+
+            // 更新全局 jobsData（包含最新计算的分数）
+            // 合并：先合并缓存，再覆盖 top 的分数
+            window.jobsData = window.allJobsCache.map(job => {
+                const s = scored.find(x => x.id === job.id);
+                return s || job;
+            });
+
+            if (top.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-8">暂无匹配岗位，请尝试修改求职意向</p>';
+                return;
+            }
+
+            top.forEach(job => {
+                const scoreColor = job.matchScore >= 70 ? 'bg-green-100 text-green-700' :
+                                   job.matchScore >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                   'bg-orange-100 text-orange-700';
+                const div = document.createElement('div');
+                div.className = 'border rounded-lg p-4 hover:border-primary transition-colors';
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="min-w-0 flex-1">
+                            <h4 class="font-semibold text-base truncate">${job.title}</h4>
+                            <p class="text-sm text-gray-600">${job.company} · ${job.location}</p>
+                        </div>
+                        <span class="${scoreColor} px-2 py-1 rounded text-sm font-medium flex-shrink-0 ml-2">${job.matchScore}% 匹配</span>
+                    </div>
+                    <p class="text-primary my-2 font-medium">${job.salary}</p>
+                    <div class="flex flex-wrap gap-1 mb-2">
+                        ${(job.tags || []).slice(0, 4).map(t => `<span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">${t}</span>`).join('')}
+                    </div>
+                    <button onclick="viewJobDetail(${job.id})" class="w-full mt-2 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 min-h-[40px]">查看详细分析</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ============================================================
+        // 职位详情弹窗 & 雷达图
+        // ============================================================
+        function viewJobDetail(jobId) {
+            // [FIX-P2] 确保 jobsData 已加载
+            if (!window.jobsData || window.jobsData.length === 0) {
+                if (!window.allJobsCache) initJobsList(true);
+                window.jobsData = window.allJobsCache;
+            }
+            const job = window.jobsData.find(j => j.id === jobId);
+            if (!job) { showToast('岗位数据未找到，请稍后重试'); return; }
+
+            window.currentJob = job;
+
+            document.getElementById('modalJobTitle').textContent = job.title;
+            document.getElementById('modalJobCompany').textContent = job.company;
+            document.getElementById('modalJobSalary').textContent = job.salary;
+            document.getElementById('modalJobLocation').textContent = job.location;
+            document.getElementById('modalJobType').textContent = job.type || '';
+            document.getElementById('modalJobMatch').textContent = job.matchScore + '% 匹配';
+
+            document.getElementById('modalJobDescription').textContent = job.description || '';
+            document.getElementById('modalJobRequirements').textContent = job.requirements || '';
+
+            let tagHtml = (job.tags || []).map(t => `<span class="px-2 py-1 bg-blue-50 text-blue-600 rounded text-sm">${t}</span>`).join('');
+            document.getElementById('modalJobTags').innerHTML = tagHtml;
+
+            let qHtml = (job.interviewQuestions || []).map(q => {
+                if (typeof q === 'string') return `<div class="bg-gray-50 p-2 rounded">${q}</div>`;
+                return `<div class="bg-gray-50 p-2 rounded"><strong>${q.q}</strong><br><em class="text-gray-500 text-sm">${q.tips}</em></div>`;
+            }).join('');
+            document.getElementById('modalInterviewQuestions').innerHTML = qHtml;
+
+            // [FIX-P2] 动态匹配分析（不再硬编码）
+            document.getElementById('modalMatchDetails').innerHTML = buildMatchDetails(job, window.userData, job.matchScore);
+
+            // [FIX-P2] 用真实 radarData 渲染
+            drawRadar(job.radarData || [50, 50, 50, 50, 50, 50]);
+            document.getElementById('jobDetailModal').classList.remove('hidden');
+            closeJobSidePanel();
+        }
+
+        function drawRadar(data) {
+            // [FIX-P2] 防止 canvas context 冲突
+            if (window.jobRadarChartInstance) {
+                window.jobRadarChartInstance.destroy();
+                window.jobRadarChartInstance = null;
+            }
+            try {
+                const ctx = document.getElementById('jobRadarChart').getContext('2d');
+                window.jobRadarChartInstance = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['硬技能', '软技能', '经验', '专业学历', '应届适配', '意向匹配'],
+                        datasets: [{
+                            label: '匹配度',
+                            data: data,
+                            backgroundColor: 'rgba(22,93,255,0.2)',
+                            borderColor: '#165DFF',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#165DFF'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { r: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            } catch (e) {
+                console.warn('雷达图渲染失败', e);
+                showToast('雷达图渲染异常，已跳过');
+            }
+        }
+
+        function closeJobModal() {
+            document.getElementById('jobDetailModal').classList.add('hidden');
+            if (window.jobRadarChartInstance) {
+                window.jobRadarChartInstance.destroy();
+                window.jobRadarChartInstance = null;
+            }
+        }
+
+        // ============================================================
+        // 侧边栏：桌面悬停滑出 + 移动端点击触发
+        // ============================================================
+        let _currentSidePanelJobId = null;
+
+        function openJobSidePanel(job) {
+            window.currentJob = job;
+            _currentSidePanelJobId = job.id;
+            document.getElementById('sidePanelTitle').textContent = job.title;
+            document.getElementById('sidePanelCompany').textContent = job.company;
+            document.getElementById('sidePanelSalary').textContent = job.salary;
+            document.getElementById('sidePanelTags').innerHTML = (job.tags || []).map(t => `<span class="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">${t}</span>`).join('');
+            document.getElementById('sidePanelPros').innerHTML = (job.pros || []).map(p => `<li>• ${p}</li>`).join('');
+            document.getElementById('sidePanelCons').innerHTML = (job.cons || []).map(c => `<li>• ${c}</li>`).join('');
+            document.getElementById('sidePanelQuestions').innerHTML = (job.interviewQuestions || []).slice(0, 3).map(q => {
+                if (typeof q === 'string') return `<div class="bg-gray-50 p-1.5 rounded text-sm">${q}</div>`;
+                return `<div class="bg-gray-50 p-1.5 rounded text-sm"><strong>${q.q}</strong><br><em class="text-gray-500 text-xs">${q.tips}</em></div>`;
+            }).join('');
+            document.getElementById('sidePanelDetailBtn').onclick = () => viewJobDetail(job.id);
+            document.getElementById('jobSidePanel').classList.remove('translate-x-full');
+        }
+
+        function closeJobSidePanel() {
+            document.getElementById('jobSidePanel').classList.add('translate-x-full');
+            const overlay = document.getElementById('sidePanelOverlay');
+            if (overlay) overlay.classList.add('hidden');
+        }
+
+        // 侧边栏自身鼠标悬停时保持打开 / mouseleave 延迟关闭
+        let _hoverOnPanel = false;
+        let _cardShowTimer = null;   // 卡片悬停→打开面板的防抖
+        let _cardCloseTimer = null;  // 卡片/面板离开→关闭的延迟
+        document.getElementById('jobSidePanel').addEventListener('mouseenter', () => {
+            _hoverOnPanel = true;
+            if (_cardCloseTimer) { clearTimeout(_cardCloseTimer); _cardCloseTimer = null; }
+        });
+        document.getElementById('jobSidePanel').addEventListener('mouseleave', () => {
+            _hoverOnPanel = false;
+            _cardCloseTimer = setTimeout(() => {
+                if (!_hoverOnPanel) closeJobSidePanel();
+            }, 400);
+        });
+
+        // ============================================================
+        // 职位库 - 完整岗位数据（25个）
+        // ============================================================
+        const OLD_JOB_INTERVIEWS = {
+            1: [
+                {q:'ES6有哪些新特性？', tips:'let/const、箭头函数、模板字符串、解构赋值、Promise、async/await、模块化'},
+                {q:'CSS盒模型是什么？', tips:'content+padding+border+margin，标准盒模型和IE盒模型区别'},
+                {q:'JS闭包是什么？', tips:'函数嵌套函数，内部函数访问外部变量；用于防抖节流、私有变量'},
+                {q:'React和Vue的区别？', tips:'React声明式、JSX、单向数据流；Vue模板语法、双向绑定'},
+                {q:'怎么优化页面加载速度？', tips:'压缩资源、CDN加速、懒加载、预加载、减少HTTP请求'}
+            ],
+            2: [
+                {q:'HTML语义化的好处？', tips:'SEO友好、可访问性、代码可读性、便于维护'},
+                {q:'CSS选择器优先级？', tips:'!important > 行内样式 > ID选择器 > 类/属性/伪类 > 标签/伪元素'},
+                {q:'JS基本数据类型？', tips:'string、number、boolean、null、undefined、symbol、bigint'},
+                {q:'Vue的生命周期？', tips:'beforeCreate、created、beforeMount、mounted、beforeUpdate、updated'},
+                {q:'怎么处理跨域问题？', tips:'JSONP、CORS、代理服务器、postMessage'}
+            ],
+            3: [
+                {q:'React Hooks有哪些？', tips:'useState、useEffect、useContext、useReducer、useMemo、useCallback'},
+                {q:'前端性能优化手段？', tips:'代码分割、懒加载、防抖节流、虚拟列表、Web Worker'},
+                {q:'WebSocket和HTTP的区别？', tips:'HTTP半双工、请求-响应；WebSocket全双工、持久连接'},
+                {q:'前端安全注意事项？', tips:'XSS（输入过滤）、CSRF（Token验证）、HTTPS'},
+                {q:'TypeScript相比JavaScript的优势？', tips:'静态类型检查、代码提示、重构友好、接口支持'}
+            ],
+            4: [
+                {q:'虚拟DOM是什么？', tips:'JS对象模拟DOM树，diff算法最小化DOM操作'},
+                {q:'前端工程化包含哪些方面？', tips:'构建工具、CI/CD、代码规范、单测、监控'},
+                {q:'CDN的工作原理？', tips:'就近访问、边缘节点缓存、回源机制、负载均衡'},
+                {q:'前端怎么实现权限控制？', tips:'路由守卫、菜单权限、按钮权限、数据权限'},
+                {q:'大文件上传怎么实现？', tips:'分片上传、断点续传、秒传、并发控制'}
+            ],
+            5: [
+                {q:'Vue2和Vue3的区别？', tips:'Vue2用Object.defineProperty，Vue3用Proxy'},
+                {q:'前端监控怎么做？', tips:'错误监控、性能监控、用户行为监控'},
+                {q:'前端缓存策略？', tips:'强缓存（Cache-Control）、协商缓存（Last-Modified）'},
+                {q:'前端路由原理？', tips:'Hash模式、History模式'},
+                {q:'前端模块化发展历程？', tips:'IIFE、CommonJS、AMD、CMD、ES Module'}
+            ],
+            6: [
+                {q:'Java集合框架有哪些？', tips:'List、Set、Map及其实现类'},
+                {q:'HashMap底层原理？', tips:'数组+链表+红黑树，put/get流程'},
+                {q:'多线程安全问题？', tips:'竞态条件、死锁；synchronized、Lock、volatile'},
+                {q:'Spring IOC和AOP？', tips:'IOC控制反转、AOP面向切面编程'},
+                {q:'MySQL索引优化？', tips:'联合索引最左前缀、覆盖索引、索引下推'}
+            ],
+            7: [
+                {q:'Redis常用数据结构？', tips:'String、Hash、List、Set、ZSet及使用场景'},
+                {q:'分布式锁实现方案？', tips:'Redis、ZooKeeper、数据库'},
+                {q:'TCP三次握手和四次挥手？', tips:'建立连接、断开连接的过程'},
+                {q:'Spring Boot自动配置原理？', tips:'@EnableAutoConfiguration、条件注解'},
+                {q:'微服务拆分原则？', tips:'单一职责、独立部署、数据隔离、服务通信'}
+            ],
+            8: [
+                {q:'消息队列的使用场景？', tips:'异步处理、应用解耦、流量削峰'},
+                {q:'Kafka怎么保证消息不丢失？', tips:'生产者、Broker、消费者三端保障'},
+                {q:'JVM内存模型和垃圾回收？', tips:'堆、方法区；GC算法'},
+                {q:'数据库事务ACID？', tips:'原子性、一致性、隔离性、持久性'},
+                {q:'Redis持久化机制？', tips:'RDB快照、AOF日志'}
+            ],
+            9: [
+                {q:'Java基础数据类型和包装类？', tips:'int/Integer、自动装箱拆箱'},
+                {q:'ArrayList和LinkedList区别？', tips:'数组vs链表、随机访问vs插入'},
+                {q:'重载和重写的区别？', tips:'编译时多态vs运行时多态'},
+                {q:'抽象类和接口的区别？', tips:'单继承vs多实现'},
+                {q:'异常处理机制？', tips:'try-catch-finally、throw、throws'}
+            ],
+            10: [
+                {q:'JVM调优参数？', tips:'-Xms、-Xmx、垃圾回收器选择'},
+                {q:'设计模式有哪些？', tips:'单例、工厂、观察者等23种'},
+                {q:'数据库索引什么时候会失效？', tips:'模糊查询、OR、函数、类型不匹配'},
+                {q:'Spring Bean的生命周期？', tips:'实例化、属性赋值、初始化、销毁'},
+                {q:'RESTful API设计原则？', tips:'资源命名、HTTP方法、状态码、版本管理'}
+            ],
+            11: [
+                {q:'需求分析的常用方法？', tips:'用户访谈、问卷调查、数据分析、竞品分析'},
+                {q:'怎么判断一个需求该不该做？', tips:'用户价值、商业价值、技术成本、ROI'},
+                {q:'产品优先级怎么排？', tips:'KANO模型、RICE评分、MVP'},
+                {q:'AB测试怎么做？', tips:'设定假设、分组、收集数据、统计分析'},
+                {q:'怎么写PRD？', tips:'背景目标、功能列表、流程图、原型图'}
+            ],
+            12: [
+                {q:'用户增长的AARRR模型？', tips:'获取、激活、留存、收入、推荐'},
+                {q:'怎么分析用户留存？', tips:'留存曲线、cohort分析、流失原因'},
+                {q:'产品指标体系怎么搭建？', tips:'北极星指标、不同层级指标'},
+                {q:'竞品分析怎么做？', tips:'明确目标、选择竞品、多维度对比'},
+                {q:'怎么和开发沟通需求？', tips:'讲清楚背景和价值、提供原型'}
+            ],
+            13: [
+                {q:'电商交易链路有哪些环节？', tips:'商品→购物车→结算→支付→发货→收货→评价'},
+                {q:'B端产品和C端产品的区别？', tips:'B端重功能、C端重体验'},
+                {q:'怎么做一个新功能？', tips:'用户调研→需求分析→设计→开发→测试→上线'},
+                {q:'数据驱动产品的方法？', tips:'埋点、分析、AB测试、迭代'},
+                {q:'产品路线图怎么规划？', tips:'战略目标→产品目标→功能拆解'}
+            ],
+            14: [
+                {q:'PRD和原型图的区别？', tips:'需求文档vs交互设计'},
+                {q:'怎么组织用户访谈？', tips:'明确目标、招募用户、准备问题'},
+                {q:'产品设计中怎么平衡用户需求和商业需求？', tips:'短期vs长期、免费vs付费'},
+                {q:'怎么写用户故事？', tips:'角色、活动、价值'},
+                {q:'产品上线后怎么验证效果？', tips:'数据监控、用户反馈、AB测试'}
+            ],
+            15: [
+                {q:'搜索产品的核心指标？', tips:'PV/UV、点击率、停留时长、跳出率'},
+                {q:'AI产品怎么设计？', tips:'明确AI能力边界、设计fallback机制'},
+                {q:'语音交互设计要点？', tips:'简洁明了、提供视觉反馈'},
+                {q:'怎么设计推荐系统？', tips:'召回、排序、重排、评估'},
+                {q:'产品国际化需要考虑什么？', tips:'语言、文化、法律、支付'}
+            ],
+            16: [
+                {q:'设计流程是什么？', tips:'需求→研究→架构→设计→落地→迭代'},
+                {q:'怎么建立设计系统？', tips:'设计原则、色彩、字体、组件、图标'},
+                {q:'响应式设计和自适应设计的区别？', tips:'一套代码vs多套代码'},
+                {q:'设计评审时怎么讲设计？', tips:'背景、过程、方案、细节、数据'},
+                {q:'Figma和Sketch的区别？', tips:'Web vs Mac、协作vs插件'}
+            ],
+            17: [
+                {q:'当前设计趋势？', tips:'玻璃拟态、3D插画、微动效、暗黑模式'},
+                {q:'设计系统和组件库的区别？', tips:'设计语言vs代码实现'},
+                {q:'图标设计原则？', tips:'一致性、可识别性、简洁性'},
+                {q:'字体设计需要考虑什么？', tips:'可读性、层级感、品牌调性'},
+                {q:'设计交付物有哪些？', tips:'设计稿、标注、切图、说明'}
+            ],
+            18: [
+                {q:'B端设计和C端设计的区别？', tips:'效率vs情感、信息密度vs视觉冲击'},
+                {q:'数据可视化设计原则？', tips:'合适图表、突出关键、减少干扰'},
+                {q:'设计走查怎么做？', tips:'对比设计稿、检查还原度'},
+                {q:'无障碍设计需要考虑什么？', tips:'颜色对比度、字体大小、键盘导航'},
+                {q:'设计迭代怎么平衡？', tips:'用户反馈、数据驱动、技术可行性'}
+            ],
+            19: [
+                {q:'怎么快速提升设计能力？', tips:'多看、临摹、做项目、接受反馈'},
+                {q:'设计稿和最终上线效果不一致怎么办？', tips:'详细标注、设计走查'},
+                {q:'怎么管理设计文件？', tips:'文件夹结构、命名规范、版本管理'},
+                {q:'运营设计和产品设计的区别？', tips:'短周期vs长期使用'},
+                {q:'怎么应对需求变更？', tips:'了解原因、评估影响、快速调整'}
+            ],
+            20: [
+                {q:'Material Design和iOS HIG的区别？', tips:'卡片阴影vs扁平清晰'},
+                {q:'暗黑模式设计要点？', tips:'避免纯黑、考虑对比度'},
+                {q:'加载状态怎么设计？', tips:'骨架屏、进度条、加载动画'},
+                {q:'空状态设计？', tips:'引导操作、清晰指示'},
+                {q:'动效设计原则？', tips:'物理直觉、时间<300ms'}
+            ],
+            21: [
+                {q:'数据分析流程？', tips:'明确问题→收集→清洗→分析→建模→结论'},
+                {q:'SQL常用语句？', tips:'SELECT、FROM、WHERE、GROUP BY、JOIN'},
+                {q:'AB测试的统计学原理？', tips:'假设检验、p值、显著性'},
+                {q:'留存分析怎么做？', tips:'定义留存、cohort分析、留存曲线'},
+                {q:'数据可视化常用图表？', tips:'折线图、柱状图、饼图、散点图'}
+            ],
+            22: [
+                {q:'大数据处理的挑战？', tips:'数据量、种类、速度、准确性'},
+                {q:'Hive和MySQL的区别？', tips:'大数据vs事务型、离线vs实时'},
+                {q:'漏斗分析怎么做？', tips:'定义路径、计算转化率、定位流失'},
+                {q:'用户画像怎么构建？', tips:'数据采集、标签体系、特征工程'},
+                {q:'数据埋点怎么设计？', tips:'明确目标、确定事件、定义属性'}
+            ],
+            23: [
+                {q:'测试用例设计方法？', tips:'等价类、边界值、场景法、因果图'},
+                {q:'白盒测试和黑盒测试的区别？', tips:'看代码vs不看代码'},
+                {q:'自动化测试的适用场景？', tips:'回归、冒烟、性能、重复执行'},
+                {q:'Bug的生命周期？', tips:'新建→分配→修复→验证→关闭'},
+                {q:'性能测试指标？', tips:'响应时间、吞吐量、并发、资源利用率'}
+            ],
+            24: [
+                {q:'CI/CD流程？', tips:'提交→构建→测试→部署→监控'},
+                {q:'容器和虚拟机的区别？', tips:'共享OS vs 独立OS'},
+                {q:'监控系统的核心指标？', tips:'RED、USE'},
+                {q:'怎么保证高可用？', tips:'负载均衡、健康检查、故障转移'},
+                {q:'Linux常用命令？', tips:'ps、top、netstat、grep、awk'}
+            ],
+            25: [
+                {q:'软件测试生命周期？', tips:'需求→计划→设计→执行→缺陷→报告'},
+                {q:'怎么写一个Bug报告？', tips:'标题、步骤、预期vs实际、截图'},
+                {q:'测试环境搭建需要考虑什么？', tips:'硬件、OS、数据库、中间件'},
+                {q:'回归测试和冒烟测试的区别？', tips:'验证修改vs验证基本功能'},
+                {q:'手工测试和自动化测试的优缺点？', tips:'灵活vs高效、成本高vs投入大'}
+            ],
+            // === 医疗行业面试题 ===
+            26: [
+                {q:'龋齿的分级与处理原则？', tips:'浅龋→中龋→深龋，分级对应充填/盖髓/根管治疗'},
+                {q:'口腔正畸的常见方法？', tips:'传统金属托槽、陶瓷托槽、隐形矫正、舌侧矫正'},
+                {q:'牙科治疗中的感染控制措施？', tips:'高温高压灭菌、手卫生、一次性器械、环境消毒'},
+                {q:'如何向患者解释治疗方案？', tips:'通俗语言、展示模型/影像、告知费用和预后'},
+                {q:'口腔急诊（牙痛）的鉴别诊断思路？', tips:'龋齿、牙髓炎、根尖周炎、智齿冠周炎'}
+            ],
+            27: [
+                {q:'口腔科常用器械有哪些？', tips:'口镜、探针、镊子、充填器、根管锉'},
+                {q:'乳牙和恒牙的区别？', tips:'乳牙乳白色、体积小、牙冠短；恒牙偏黄、体积大'},
+                {q:'牙周病的病因？', tips:'牙菌斑、牙结石、不良修复体、全身因素'},
+                {q:'口腔诊疗中的无菌操作原则？', tips:'无菌区、器械消毒、手套更换、废物处理'},
+                {q:'常见口腔溃疡的鉴别？', tips:'复发性阿弗他、创伤性、病毒性、癌前病变'}
+            ],
+            28: [
+                {q:'临床住院医师的职责有哪些？', tips:'病历书写、病情观察、医嘱执行、医患沟通'},
+                {q:'心力衰竭的临床表现？', tips:'劳力性呼吸困难、端坐呼吸、肺部湿啰音、下肢水肿'},
+                {q:'抗生素使用的原则？', tips:'有指征、正确选药、足量足疗程、注意不良反应'},
+                {q:'医患沟通的基本原则？', tips:'尊重、倾听、清晰解释、共情、知情同意'},
+                {q:'急性腹痛的鉴别诊断？', tips:'阑尾炎、胆囊炎、胰腺炎、肠梗阻、消化道穿孔'}
+            ],
+            29: [
+                {q:'护理三查七对是什么？', tips:'三查：操作前中后查；七对：床号姓名药名浓度剂量时间用法'},
+                {q:'静脉输液的注意事项？', tips:'无菌操作、滴速控制、观察不良反应、穿刺部位护理'},
+                {q:'生命体征的正常值范围？', tips:'体温36-37、脉搏60-100、呼吸16-20、血压<120/80'},
+                {q:'压疮的预防措施？', tips:'定时翻身、保持清洁干燥、营养支持、减压垫'},
+                {q:'急救的基本流程（BLS）？', tips:'判断意识→呼叫→开放气道→人工呼吸→胸外按压'}
+            ],
+            30: [
+                {q:'药品推广的核心要点？', tips:'学术化、合规化、患者受益、临床数据支撑'},
+                {q:'医药代表的合规红线有哪些？', tips:'禁止带金销售、禁止虚假宣传、保护患者隐私'},
+                {q:'如何向医生介绍新药？', tips:'临床证据、适应症、用法用量、不良反应、医保情况'},
+                {q:'医药代表需要哪些专业素养？', tips:'医学知识、沟通能力、合规意识、抗压能力'},
+                {q:'药企的渠道管理基本概念？', tips:'医院渠道、零售渠道、渠道管理、价格体系'}
+            ],
+            // === 法学行业面试题 ===
+            31: [
+                {q:'合同审查的要点有哪些？', tips:'主体资格、合同标的、价格条款、违约责任、争议解决'},
+                {q:'知识产权的常见类型？', tips:'著作权、商标权、专利权、商业秘密'},
+                {q:'公司法的主要规定？', tips:'公司设立、组织架构、股东权利、董事责任'},
+                {q:'劳动合同解除的法定情形？', tips:'协商一致、劳动者单方解除、用人单位单方解除、裁员'},
+                {q:'数据合规的法律要求？', tips:'个人信息保护法、数据安全法、用户同意、数据分类'}
+            ],
+            32: [
+                {q:'企业合规体系包含哪些方面？', tips:'反贿赂、反垄断、数据保护、出口管制、劳动合规'},
+                {q:'风险评估的方法？', tips:'识别→分析→评价→应对'},
+                {q:'如何建立合规管理制度？', tips:'顶层设计、制度建设、培训宣贯、监督检查'},
+                {q:'国际贸易中的法律风险？', tips:'制裁风险、关税壁垒、知识产权保护、合同纠纷'},
+                {q:'合规和法务的区别？', tips:'合规重事前预防、法务重事后救济'}
+            ],
+            33: [
+                {q:'民事诉讼的基本程序？', tips:'起诉→立案→开庭→判决→上诉→执行'},
+                {q:'法律检索的工具和方法？', tips:'北大法宝、威科先行、裁判文书网；关键词+法条检索'},
+                {q:'法律文书写作要点？', tips:'格式规范、事实陈述、法律分析、结论明确'},
+                {q:'律师职业道德要求？', tips:'忠实勤勉、保守秘密、利益冲突回避'},
+                {q:'如何整理案件材料？', tips:'按时间/主体/法律问题分类，制作证据目录'}
+            ],
+            // === 文博/文史行业面试题 ===
+            34: [
+                {q:'策展的基本流程？', tips:'选题→研究→大纲→展品甄选→展陈设计→开幕式'},
+                {q:'文物的保管和保护措施？', tips:'恒温恒湿、防紫外线、防虫防霉、安保系统'},
+                {q:'如何撰写展览说明文字？', tips:'简洁通俗、图文配合、学术准确、分级信息'},
+                {q:'博物馆的社会教育功能？', tips:'讲解服务、教育活动、线上传播、社区合作'},
+                {q:'文物鉴定的基本方法？', tips:'目鉴、仪器检测、文献考证、考古学方法'}
+            ],
+            35: [
+                {q:'编辑工作的核心流程？', tips:'选题→组稿→审读→加工→校对→出版'},
+                {q:'三审三校制度是什么？', tips:'初审/复审/终审 + 一校/二校/三校'},
+                {q:'如何判断一本书的出版价值？', tips:'学术价值、市场前景、社会影响、作者影响力'},
+                {q:'书稿加工中常见的问题？', tips:'事实错误、逻辑矛盾、体例不统一、版权风险'},
+                {q:'校对的基本方法？', tips:'折校、对校、读校；关注格式、文字、标点'}
+            ],
+            36: [
+                {q:'新媒体运营的核心指标？', tips:'涨粉、阅读量、转发量、转化率、留存率'},
+                {q:'如何策划一期爆款内容？', tips:'热点追踪、用户洞察、标题优化、互动设计'},
+                {q:'短视频制作的流程？', tips:'选题→脚本→拍摄→剪辑→发布→复盘'},
+                {q:'社交媒体的算法推荐原理？', tips:'内容标签、用户画像、互动反馈、信息流'},
+                {q:'如何应对负面舆情？', tips:'快速响应、真诚沟通、解决问题、后续跟进'}
+            ],
+            // === 教育行业面试题 ===
+            37: [
+                {q:'一堂好课的标准是什么？', tips:'目标明确、内容充实、方法得当、学生参与、效果显著'},
+                {q:'如何管理课堂纪律？', tips:'规则建立、正向激励、个别谈话、家校沟通'},
+                {q:'分层教学的实施方法？', tips:'诊断分层、目标分层、教学分层、作业分层'},
+                {q:'家访的注意事项？', tips:'预约时间、准备话题、积极倾听、保护隐私'},
+                {q:'如何应对学生的心理健康问题？', tips:'观察识别、及时沟通、专业转介、持续关注'}
+            ],
+            38: [
+                {q:'课程研发的基本步骤？', tips:'需求调研→目标设定→内容框架→材料编写→试讲优化'},
+                {q:'如何评估课程效果？', tips:'学生满意度、成绩提升、行为改变、续报率'},
+                {q:'在线课程和线下课程的设计差异？', tips:'时长控制、互动设计、视觉呈现、学习节奏'},
+                {q:'如何做学情分析？', tips:'入学测试、过程数据、阶段测评、问卷访谈'},
+                {q:'教育产品的竞品分析方法？', tips:'产品定位、课程体系、价格策略、用户口碑'}
+            ],
+            // === 金融行业面试题 ===
+            39: [
+                {q:'三大财务报表是什么？', tips:'资产负债表、利润表、现金流量表'},
+                {q:'财务分析常用指标？', tips:'ROE、ROA、毛利率、净利率、流动比率、速动比率'},
+                {q:'杜邦分析法的分解？', tips:'ROE=净利率×总资产周转率×权益乘数'},
+                {q:'如何识别财务造假？', tips:'收入异常增长、现金流与利润不匹配、关联交易'},
+                {q:'Excel在财务分析中的应用？', tips:'数据透视表、VLOOKUP、图表制作、财务模型'}
+            ],
+            40: [
+                {q:'审计的四个阶段？', tips:'计划→实施→报告→后续'},
+                {q:'审计证据的类型？', tips:'书面证据、实物检查、口头询问、分析性程序'},
+                {q:'内部控制的基本要素？', tips:'控制环境、风险评估、控制活动、信息沟通、监督'},
+                {q:'重要性水平是什么意思？', tips:'可能影响使用者决策的错报金额阈值'},
+                {q:'审计报告的类型？', tips:'无保留意见、保留意见、否定意见、无法表示意见'}
+            ],
+            41: [
+                {q:'商业银行的主要业务？', tips:'存款、贷款、结算、信用卡、理财、外汇'},
+                {q:'反洗钱的基本要求？', tips:'客户身份识别、大额交易报告、可疑交易报告、客户风险分类'},
+                {q:'利率市场化对银行的影响？', tips:'息差收窄、风险定价能力要求提高'},
+                {q:'银行柜员的服务规范？', tips:'微笑服务、规范用语、核验身份、准确办理'},
+                {q:'金融科技的常见应用？', tips:'移动支付、智能风控、区块链、AI客服'}
+            ],
+            // === 管理/行政面试题 ===
+            42: [
+                {q:'招聘的基本流程？', tips:'需求确认→发布→筛选→面试→录用→入职'},
+                {q:'如何评估候选人？', tips:'能力、经验、文化适配、成长潜力'},
+                {q:'员工关系管理的核心？', tips:'沟通机制、员工关怀、冲突处理、合规管理'},
+                {q:'绩效管理的方法？', tips:'KPI、OKR、360度评估'},
+                {q:'劳动法基本知识？', tips:'劳动合同、工作时间、社会保险、解雇保护'}
+            ],
+            43: [
+                {q:'行政管理的核心工作？', tips:'办公环境、采购管理、会议组织、档案管理、接待'},
+                {q:'如何提高行政工作效率？', tips:'流程标准化、数字化工具、优先级管理、委派协作'},
+                {q:'大型活动/会议的筹备要点？', tips:'场地→议程→通知→物料→执行→总结'},
+                {q:'办公物资采购的原则？', tips:'性价比、合规、供应商管理、库存控制'},
+                {q:'如何处理多方协调工作？', tips:'明确需求、建立机制、及时沟通、文档化'}
+            ],
+            44: [
+                {q:'你认为管培生最重要的能力是什么？', tips:'快速学习、适应性、领导力、商业敏感度'},
+                {q:'如何理解快消行业的商业模式？', tips:'品牌驱动、渠道为王、消费者洞察、供应链效率'},
+                {q:'遇到不同部门的冲突怎么处理？', tips:'倾听双方诉求、找到共赢方案、数据驱动决策'},
+                {q:'你未来3年的职业规划？', tips:'轮岗学习→专业深耕→团队管理'},
+                {q:'为什么选择管培生项目？', tips:'系统培训、多岗经验、快速成长通道'}
+            ],
+            // === 制造/工程面试题 ===
+            45: [
+                {q:'机械设计中常用的材料？', tips:'碳钢、不锈钢、铝合金、工程塑料、复合材料'},
+                {q:'公差和配合的概念？', tips:'间隙配合、过渡配合、过盈配合；尺寸公差、形位公差'},
+                {q:'CAD/CAM软件的使用经验？', tips:'SolidWorks、AutoCAD、CATIA等'},
+                {q:'有限元分析的应用场景？', tips:'强度分析、疲劳分析、热分析、振动分析'},
+                {q:'制造工艺的常见类型？', tips:'铸造、锻造、焊接、机加工、3D打印'}
+            ],
+            46: [
+                {q:'化工生产的核心安全原则？', tips:'防爆、防毒、防火、防泄漏、PPE'},
+                {q:'常见的分离工艺？', tips:'蒸馏、萃取、结晶、膜分离、吸附'},
+                {q:'化工仪表和控制系统的类型？', tips:'DCS、PLC、SCADA、SIS'},
+                {q:'化学反应器的设计考虑因素？', tips:'传热、传质、停留时间、安全性'},
+                {q:'环保法规对化工企业的要求？', tips:'三废处理、排放标准、清洁生产、环境监测'}
+            ],
+            47: [
+                {q:'ISO 9001质量管理体系的核心？', tips:'客户导向、领导力、过程方法、持续改进'},
+                {q:'QC七大手法是什么？', tips:'检查表、帕累托图、因果图、散布图、直方图等'},
+                {q:'SPC（统计过程控制）的原理？', tips:'通过控制图监控过程变异，及时识别异常'},
+                {q:'不合格品处理流程？', tips:'标识→隔离→评审→处置→原因分析→纠正措施'},
+                {q:'供应商质量管理方法？', tips:'准入审核、过程监控、绩效评估、持续改善'}
+            ]
+        };
+
+        // allJobs 完整职位数据（缓存到 window.allJobsCache）
+        // [FIX-P0] 对所有岗位增加行业标签、职级标签、requirements 字段
+        function buildAllJobs() {
+            return [
+                {id:1,title:'前端开发工程师（校招）',company:'腾讯',location:'深圳',salary:'18-25K/月',type:'校招',tags:['HTML','CSS','JS','React','TS'],description:'负责微信生态前端开发与性能优化',requirements:'1.精通前端基础\n2.熟悉React\n3.了解TS优先',pros:['免费三餐','转正机会'],cons:['工作强度偏大']},
+                {id:2,title:'前端开发实习生',company:'美团',location:'北京',salary:'180-250/天',type:'实习',tags:['HTML','CSS','JS','Vue'],description:'参与外卖业务页面迭代',requirements:'1.掌握前端基础\n2.了解Vue',pros:['房补','氛围好'],cons:['加班较多']},
+                {id:3,title:'前端开发工程师',company:'阿里',location:'杭州',salary:'20-28K/月',type:'校招',tags:['React','TS'],description:'淘系前端开发',requirements:'熟悉React、TS',pros:['期权'],cons:['996']},
+                {id:4,title:'前端开发工程师',company:'字节',location:'北京',salary:'22-30K/月',type:'校招',tags:['React','工程化','JS'],description:'抖音前端开发',requirements:'熟悉前端工程化',pros:['薪资高'],cons:['大小周']},
+                {id:5,title:'前端开发工程师',company:'百度',location:'北京',salary:'18-26K/月',type:'校招',tags:['Vue','JS'],description:'搜索页面前端',requirements:'掌握Vue或React',pros:['稳定'],cons:['晋升慢']},
+                {id:6,title:'Java开发（校招）',company:'阿里',location:'杭州',salary:'20-28K/月',type:'校招',tags:['Java','Spring','MySQL'],description:'电商后端开发',requirements:'1.熟悉Java\n2.了解Spring',pros:['期权'],cons:['996']},
+                {id:7,title:'Java开发',company:'腾讯',location:'深圳',salary:'19-27K/月',type:'校招',tags:['SpringBoot','Redis','Java'],description:'支付后端开发',requirements:'Java后端基础',pros:['福利好'],cons:['节奏紧']},
+                {id:8,title:'Java开发',company:'字节',location:'北京',salary:'21-29K/月',type:'校招',tags:['Kafka','MySQL','Java'],description:'业务后端开发',requirements:'Java后端开发经验',pros:['薪资高'],cons:['大小周']},
+                {id:9,title:'Java实习生',company:'美团',location:'北京',salary:'200-280/天',type:'实习',tags:['Java','SQL'],description:'后台开发',requirements:'Java基础',pros:['房补'],cons:['加班']},
+                {id:10,title:'Java开发',company:'华为',location:'深圳',salary:'18-26K/月',type:'校招',tags:['Oracle','微服务','Java'],description:'云服务后端',requirements:'Java后端',pros:['编制稳定'],cons:['流程多']},
+                {id:11,title:'产品经理（校招）',company:'腾讯',location:'深圳',salary:'16-24K/月',type:'校招',tags:['产品设计','Axure','原型'],description:'微信产品设计',requirements:'1.了解产品设计\n2.有竞品分析经验',pros:['体系完善'],cons:['沟通多']},
+                {id:12,title:'产品经理',company:'字节',location:'北京',salary:'18-26K/月',type:'校招',tags:['数据分析','用户研究','产品'],description:'短视频产品',requirements:'产品设计或运营',pros:['薪资高'],cons:['节奏快']},
+                {id:13,title:'产品经理',company:'阿里',location:'杭州',salary:'17-25K/月',type:'校招',tags:['电商产品','产品'],description:'淘宝产品',requirements:'电商或用户研究经验',pros:['期权'],cons:['压力大']},
+                {id:14,title:'产品实习生',company:'美团',location:'北京',salary:'150-220/天',type:'实习',tags:['原型设计','产品'],description:'外卖产品设计',requirements:'了解原型工具',pros:['实习证明'],cons:['加班']},
+                {id:15,title:'产品经理',company:'百度',location:'北京',salary:'15-23K/月',type:'校招',tags:['搜索产品','产品'],description:'搜索业务产品',requirements:'产品思维，数据分析能力',pros:['稳定'],cons:['薪资一般']},
+                {id:16,title:'UI设计师（校招）',company:'腾讯',location:'深圳',salary:'14-22K/月',type:'校招',tags:['Figma','PS','UI'],description:'界面设计',requirements:'1.掌握Figma\n2.有作品集',pros:['设计体系'],cons:['改稿多']},
+                {id:17,title:'UI设计师',company:'字节',location:'北京',salary:'15-23K/月',type:'校招',tags:['动效','Sketch','UI'],description:'APP视觉设计',requirements:'视觉设计或动效能力',pros:['薪资高'],cons:['大小周']},
+                {id:18,title:'UI设计师',company:'阿里',location:'杭州',salary:'14-22K/月',type:'校招',tags:['交互设计','UI','PS'],description:'电商UI设计',requirements:'交互或视觉设计',pros:['期权'],cons:['996']},
+                {id:19,title:'UI实习生',company:'美团',location:'北京',salary:'140-200/天',type:'实习',tags:['PS','AI','UI'],description:'页面视觉设计',requirements:'会使用设计软件',pros:['下午茶'],cons:['加班']},
+                {id:20,title:'UI设计师',company:'小米',location:'北京',salary:'13-21K/月',type:'校招',tags:['MIUI','UI','Figma'],description:'系统UI设计',requirements:'UI基础，有系统设计经验',pros:['员工折扣'],cons:['薪资中等']},
+                {id:21,title:'数据分析师',company:'腾讯',location:'深圳',salary:'15-23K/月',type:'校招',tags:['Python','SQL','Tableau'],description:'用户数据分析',requirements:'SQL+Python',pros:['数据体系完善'],cons:['数据量大']},
+                {id:22,title:'数据分析师',company:'字节',location:'北京',salary:'16-24K/月',type:'校招',tags:['Hive','Spark','SQL'],description:'用户行为分析',requirements:'大数据工具使用',pros:['薪资高'],cons:['节奏快']},
+                {id:23,title:'测试工程师',company:'腾讯',location:'深圳',salary:'14-22K/月',type:'校招',tags:['功能测试','自动化测试'],description:'APP功能测试',requirements:'测试用例设计',pros:['压力小'],cons:['重复性高']},
+                {id:24,title:'运维工程师',company:'阿里',location:'杭州',salary:'15-24K/月',type:'校招',tags:['Linux','Docker','运维'],description:'服务器运维',requirements:'Linux基础，了解容器',pros:['技术全面'],cons:['轮班']},
+                {id:25,title:'软件测试实习生',company:'百度',location:'北京',salary:'130-200/天',type:'实习',tags:['手工测试','功能测试'],description:'功能测试',requirements:'了解测试基础',pros:['轻松'],cons:['技术成长慢']},
+                // === 医疗/医学行业 ===
+                {id:26,title:'口腔医生（校招）',company:'瑞尔齿科',location:'北京',salary:'12-18K/月',type:'校招',tags:['口腔医学','牙体牙髓','正畸','牙医'],description:'口腔门诊接诊与基础治疗',requirements:'口腔医学专业，掌握基础牙科操作',pros:['晋升路径清晰','带教体系'],cons:['前期薪资偏低']},
+                {id:27,title:'口腔实习生',company:'拜博口腔',location:'上海',salary:'120-180/天',type:'实习',tags:['口腔','牙科','实习'],description:'协助主治医生完成基础牙科操作',requirements:'口腔医学相关专业在读',pros:['上手机会多','转正机会'],cons:['工作强度大']},
+                {id:28,title:'临床医生（规培）',company:'协和医院',location:'北京',salary:'8-12K/月',type:'校招',tags:['临床医学','内科','外科','规培'],description:'住院医师规范化培训',requirements:'临床医学本科及以上',pros:['平台好','带教完善'],cons:['轮班制']},
+                {id:29,title:'护士',company:'华山医院',location:'上海',salary:'7-10K/月',type:'校招',tags:['护理','护士','临床'],description:'病房护理与患者管理',requirements:'护理专业，有护士资格证',pros:['编制稳定'],cons:['夜班较多']},
+                {id:30,title:'医药代表',company:'辉瑞',location:'北京',salary:'10-15K/月',type:'校招',tags:['医药代表','医药','销售'],description:'药品学术推广与客户关系维护',requirements:'医药相关专业，沟通能力强',pros:['薪资增长快','出差补贴'],cons:['业绩压力大']},
+                // === 法学/法律行业 ===
+                {id:31,title:'法务助理（校招）',company:'腾讯',location:'深圳',salary:'12-18K/月',type:'校招',tags:['法务','合同审查','合规','法学'],description:'协助处理合同审查、知识产权事务',requirements:'法学专业，通过司法考试优先',pros:['互联网法务经验','转正机会'],cons:['加班较多']},
+                {id:32,title:'合规专员',company:'华为',location:'深圳',salary:'13-19K/月',type:'校招',tags:['合规','法律','风险管理'],description:'合规体系建设与风险评估',requirements:'法律/管理类专业，了解合规体系',pros:['国际化平台','薪资较高'],cons:['出差频繁']},
+                {id:33,title:'律师助理（实习）',company:'金杜律所',location:'北京',salary:'150-220/天',type:'实习',tags:['律师','诉讼','法律检索','法律文书'],description:'协助律师整理案件材料与法律检索',requirements:'法学专业研究生在读优先',pros:['顶级律所经验','导师带教'],cons:['工作强度极大']},
+                // === 文博/文史/传媒行业 ===
+                {id:34,title:'博物馆策展助理',company:'故宫博物院',location:'北京',salary:'8-12K/月',type:'校招',tags:['策展','文物','博物馆','历史'],description:'协助展览策划与文物研究',requirements:'文博/历史/考古专业',pros:['事业编制','文化氛围'],cons:['晋升缓慢']},
+                {id:35,title:'图书编辑',company:'中华书局',location:'北京',salary:'8-12K/月',type:'校招',tags:['编辑','出版','文案','校对'],description:'图书选题策划与编辑加工',requirements:'文史相关专业，文字功底扎实',pros:['文化底蕴深厚','工作稳定'],cons:['薪资偏低']},
+                {id:36,title:'新媒体运营',company:'字节',location:'北京',salary:'10-15K/月',type:'校招',tags:['新媒体','运营','文案','视频'],description:'内容策划与账号运营',requirements:'传媒/中文/市场营销相关专业',pros:['成长快','平台大'],cons:['节奏快']},
+                // === 教育行业 ===
+                {id:37,title:'中小学教师',company:'好未来',location:'北京',salary:'8-12K/月',type:'校招',tags:['教师','教学','教育','辅导'],description:'学科教学与学生辅导',requirements:'师范类专业，持有教师资格证',pros:['寒暑假','教培经验'],cons:['课时压力大']},
+                {id:38,title:'课程研发',company:'学而思',location:'北京',salary:'10-15K/月',type:'校招',tags:['课程设计','教育','教研'],description:'课程体系设计与教研支持',requirements:'教育/学科相关专业',pros:['创新空间大'],cons:['需求变动频繁']},
+                // === 金融/财会行业 ===
+                {id:39,title:'财务分析师（校招）',company:'普华永道',location:'上海',salary:'12-18K/月',type:'校招',tags:['财务分析','会计','Excel','审计'],description:'企业财务数据分析与风险识别',requirements:'财会/金融专业，CPA优先',pros:['四大平台','培训体系'],cons:['加班多']},
+                {id:40,title:'审计助理',company:'德勤',location:'北京',salary:'10-15K/月',type:'校招',tags:['审计','会计','CPA','财报'],description:'协助完成审计项目与底稿整理',requirements:'会计/审计专业',pros:['四大经验','职业发展'],cons:['淡旺季明显']},
+                {id:41,title:'银行柜员',company:'招商银行',location:'深圳',salary:'8-12K/月',type:'校招',tags:['银行','柜员','金融','服务'],description:'柜台业务办理与客户服务',requirements:'金融/经济相关专业',pros:['稳定编制','晋升通道'],cons:['重复性高']},
+                // === 管理/行政/管培 ===
+                {id:42,title:'HR专员',company:'腾讯',location:'深圳',salary:'10-15K/月',type:'校招',tags:['HR','人力资源','招聘','培训'],description:'招聘执行与员工关系管理',requirements:'人力资源/管理类专业',pros:['互联网HR经验','福利好'],cons:['招聘旺季压力大']},
+                {id:43,title:'行政专员',company:'阿里',location:'杭州',salary:'8-12K/月',type:'校招',tags:['行政','管理','后勤'],description:'行政事务管理与办公环境维护',requirements:'管理类专业，沟通协调能力强',pros:['工作稳定','福利完善'],cons:['事务繁杂']},
+                {id:44,title:'管培生',company:'宝洁',location:'广州',salary:'12-18K/月',type:'校招',tags:['管培','管理','轮岗','综合'],description:'多部门轮岗培养管理人才',requirements:'专业不限，具有领导力潜力',pros:['完善培训体系','晋升快速'],cons:['轮岗压力大']},
+                // === 制造/工程行业 ===
+                {id:45,title:'机械工程师',company:'三一重工',location:'长沙',salary:'10-15K/月',type:'校招',tags:['机械','制造','CAD','工程'],description:'机械设计与制造工艺优化',requirements:'机械设计/制造相关专业',pros:['技术积累好','出差补贴'],cons:['工厂环境']},
+                {id:46,title:'化工工程师',company:'万华化学',location:'烟台',salary:'10-14K/月',type:'校招',tags:['化工','化学','工艺','制造'],description:'化工工艺改进与生产管理',requirements:'化学/化工相关专业',pros:['行业龙头','薪资稳定'],cons:['化工安全风险']},
+                {id:47,title:'质量工程师',company:'格力',location:'珠海',salary:'8-12K/月',type:'校招',tags:['质量','制造','ISO','品控'],description:'质量控制体系维护与改进',requirements:'工科相关专业',pros:['大厂经验','工作稳定'],cons:['琐碎重复']}
+            ].map(job => {
+                if (OLD_JOB_INTERVIEWS[job.id]) job.interviewQuestions = OLD_JOB_INTERVIEWS[job.id];
+                else if (!job.interviewQuestions) job.interviewQuestions = [];
+                return job;
+            });
+        }
+
+        /**
+         * 初始化职位库列表
+         * @param {boolean} silentMode - 静默模式：只更新数据缓存，不渲染DOM
+         */
+        function initJobsList(silentMode) {
+            const allJobs = buildAllJobs();
+            window.allJobsCache = allJobs;
+
+            // 计算用户匹配分数（如果 userData 有内容）
+            if (window.userData.major || window.userData.intention) {
+                allJobs.forEach(job => {
+                    const result = calcJobScore(job, window.userData);
+                    job.matchScore = result.score;
+                    job.radarData = result.radarData;
+                });
+            }
+
+            window.jobsData = allJobs;
+
+            if (silentMode) return; // 静默模式不渲染
+
+            renderJobsList(allJobs);
+        }
+
+        // [FIX-P0] filterJobs 实现真实过滤逻辑
+        function filterJobs() {
+            if (!window.allJobsCache) initJobsList(true);
+            const industry = document.getElementById('filterIndustry').value.toLowerCase();
+            const location = document.getElementById('filterLocation').value;
+            const salary = document.getElementById('filterSalary').value;
+            const keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
+
+            let filtered = window.allJobsCache.filter(job => {
+                // 行业过滤
+                if (industry) {
+                    const jobText = (job.title + ' ' + (job.tags || []).join(' ') + ' ' + (job.description || '')).toLowerCase();
+                    const industryMap = {
+                        '互联网': ['前端','java','python','算法','程序','开发','工程','软件','web'],
+                        '产品': ['产品','运营','pm','原型'],
+                        '设计': ['设计','ui','ux','视觉'],
+                        '数据': ['数据','分析','sql','hive','python','统计'],
+                        '测试': ['测试','qa','运维','自动化'],
+                        '医疗': ['医','护','药','健康','临床','口腔','牙','规培','护理'],
+                        '法学': ['法务','律师','合规','法律','诉讼','司法','合同'],
+                        '文博': ['博物馆','文物','考古','策展','编辑','出版','媒体','运营','传媒','文案'],
+                        '教育': ['教育','教师','教学','辅导','培训','课程'],
+                        '金融/财务': ['金融','财务','会计','审计','银行','证券','基金','cpa','柜员','税'],
+                        '管理': ['hr','人力资源','行政','管理','管培','招聘','培训','后勤'],
+                        '制造业': ['机械','制造','工程','化工','质量','cad','工艺','品控','iso']
+                    };
+                    const kws = industryMap[industry] || [industry];
+                    if (!kws.some(kw => jobText.includes(kw))) return false;
+                }
+                // 城市过滤
+                if (location && job.location !== location) return false;
+                // 薪资过滤（简单判断）
+                if (salary) {
+                    const salaryText = job.salary;
+                    const nums = salaryText.match(/\d+/g) || [];
+                    const maxNum = Math.max(...nums.map(Number));
+                    if (salary === 'low' && maxNum > 200 && !salaryText.includes('天')) {
+                        if (maxNum > 15) return false;
+                    }
+                    if (salary === 'mid' && (maxNum < 15 || maxNum > 25) && !salaryText.includes('天')) return false;
+                    if (salary === 'high' && maxNum < 25 && !salaryText.includes('天')) return false;
+                }
+                // 关键词过滤
+                if (keyword) {
+                    const jobText = (job.title + ' ' + job.company + ' ' + (job.tags || []).join(' ')).toLowerCase();
+                    if (!jobText.includes(keyword)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                document.getElementById('jobsList').innerHTML = '<div class="col-span-3 text-center text-gray-400 py-12"><i class="fa fa-search text-4xl mb-4 block"></i>未找到匹配岗位，请尝试调整筛选条件</div>';
+            } else {
+                renderJobsList(filtered);
+            }
+        }
+
+        function renderJobsList(jobs) {
+            const container = document.getElementById('jobsList');
+            container.innerHTML = '';
+            jobs.forEach(job => {
+                const div = document.createElement('div');
+                div.className = 'bg-white rounded-xl shadow-sm p-6 card-hover cursor-pointer';
+                // 桌面端：全局防抖（快速切换卡片不会闪缩）
+                div.addEventListener('mouseenter', () => {
+                    if (_cardShowTimer) clearTimeout(_cardShowTimer);
+                    if (_cardCloseTimer) { clearTimeout(_cardCloseTimer); _cardCloseTimer = null; }
+                    _cardShowTimer = setTimeout(() => openJobSidePanel(job), 300);
+                });
+                div.addEventListener('mouseleave', () => {
+                    if (_cardShowTimer) { clearTimeout(_cardShowTimer); _cardShowTimer = null; }
+                    _cardCloseTimer = setTimeout(() => {
+                        if (!_hoverOnPanel) closeJobSidePanel();
+                    }, 450);
+                });
+                div.addEventListener('click', (e) => {
+                    if (!e.target.closest('button') && window.innerWidth <= 768) {
+                        openJobSidePanel(job);
+                    }
+                });
+                div.addEventListener('touchstart', () => {}, { passive: true });
+                div.innerHTML = `
+                    <h3 class="font-semibold text-lg">${job.title}</h3>
+                    <p class="text-gray-600 text-sm my-1">${job.company} · ${job.location}</p>
+                    <p class="text-primary font-medium mb-3">${job.salary}</p>
+                    <div class="flex flex-wrap gap-1 mb-4">
+                        ${(job.tags || []).map(t => `<span class="px-1 bg-blue-50 text-blue-600 rounded text-xs">${t}</span>`).join('')}
+                    </div>
+                    <button onclick="event.stopPropagation();viewJobDetail(${job.id})" class="w-full px-4 py-2 border border-primary text-primary rounded hover:bg-primary/5 min-h-[44px]">查看详情</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ============================================================
+        // 简历优化
+        // ============================================================
+        // [FIX-P1] 修正变量引用：从 window.userData 读取
+        function loadMyResume() {
+            const ud = window.userData;
+            let res = `${ud.name || '（请先填写姓名）'}\n${ud.phone || ''} ${ud.email || ''}\n${ud.school || ''} ${ud.major || ''} ${ud.degree || ''} ${ud.gradYear ? ud.gradYear+'届' : ''}\n技能：${ud.skills || ''}\n经历：${ud.experience || ''}`;
+            document.getElementById('originalResume').value = res.trim();
+        }
+
+        // ============================================================
+        // 简历智能优化 — 诊断评分 + 针对性优化 + HR级输出
+        // ============================================================
+
+        // --- 技能名称规范化映射 ---
+        const _skillNameMap = {
+            'javascript':'JavaScript','js':'JavaScript','typescript':'TypeScript','ts':'TypeScript',
+            'html':'HTML','css':'CSS','node.js':'Node.js','node':'Node.js','sass':'Sass/SCSS',
+            'golang':'Go','pytorch':'PyTorch','tensorflow':'TensorFlow','kubernetes':'Kubernetes',
+            'k8s':'Kubernetes','mysql':'MySQL','postgresql':'PostgreSQL','mongodb':'MongoDB',
+            'redis':'Redis','docker':'Docker','jenkins':'Jenkins','nginx':'Nginx','git':'Git',
+            'linux':'Linux','springboot':'Spring Boot','fastapi':'FastAPI','photoshop':'Photoshop',
+            'illustrator':'Illustrator','next.js':'Next.js','nuxt.js':'Nuxt.js','restful':'RESTful API',
+            'graphql':'GraphQL','ci/cd':'CI/CD','elasticsearch':'Elasticsearch','sklearn':'Scikit-learn',
+            'webpack':'Webpack','vite':'Vite','express':'Express','koa':'Koa'
+        };
+        function _normSkill(kw) { return _skillNameMap[kw] || (kw.charAt(0).toUpperCase() + kw.slice(1)); }
+
+        // --- 全维度信息提取引擎 ---
+        function _extractResumeData(raw) {
+            const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+            const rl = raw.toLowerCase();
+            const data = {
+                name:'', phone:'', email:'', school:'', major:'', degree:'', gradYear:'', gpa:'',
+                courses:[], skills:[], softSkills:[], projects:[], internships:[], awards:[], certs:[], campus:[]
+            };
+
+            // 姓名
+            if (lines.length > 0 && lines[0].length <= 10 && !lines[0].includes(' ') && !/[@\d]/.test(lines[0])) {
+                data.name = lines[0].replace(/[，,。.：:]/g, '');
+            }
+            if (!data.name) { const m = raw.match(/(?:姓名|名字)[：:]\s*(\S+)/); if (m) data.name = m[1]; }
+
+            // 联系方式
+            data.phone = (raw.match(/1[3-9]\d{9}/) || [''])[0];
+            data.email = (raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/) || [''])[0];
+
+            // 教育
+            const sm = raw.match(/(\S*(?:大学|学院|University))/i);
+            if (sm) data.school = sm[1];
+            if (raw.includes('博士') || /Ph\.?D/i.test(raw)) data.degree = '博士';
+            else if (raw.includes('硕士') || raw.includes('研究生')) data.degree = '硕士';
+            else if (raw.includes('本科') || raw.includes('学士')) data.degree = '本科';
+            else if (raw.includes('大专') || raw.includes('专科')) data.degree = '大专';
+
+            const mj = raw.match(/专业[：:]\s*(\S+)|(\S+(?:工程|科学|技术|管理|设计|医学|法学|教育|文学|艺术|经济|金融|会计|营销|人力|临床|口腔|药学|护理|机械|电子|电气|土木|建筑|化工))\s*(?:专业|本科|硕士)?/);
+            if (mj) data.major = (mj[1] || mj[2] || '').replace(/专业$/, '');
+
+            const yr = raw.match(/20\d{2}\s*(?:年|届|级|毕业)/);
+            if (yr) data.gradYear = yr[0].replace(/[年届级毕业]/g, '');
+
+            const gm = raw.match(/(?:GPA|绩点|平均分)[：: ]*(\d+\.?\d*)/i);
+            if (gm) data.gpa = gm[1];
+
+            const cm = raw.match(/(?:主修|核心|相关)?课程[：:]\s*([^\n]+)/);
+            if (cm) cm[1].split(/[，,、;；]/).forEach(c => { const t = c.trim(); if (t && t.length < 30) data.courses.push(t); });
+
+            // 技能检测 — IT技术类
+            const techKws = [
+                'react','vue','angular','typescript','next.js','nuxt.js','webpack','vite','redux','vuex','pinia',
+                'graphql','trpc','micro-frontend','tailwind','sass','bootstrap','jquery',
+                'javascript','python','java','php','go','golang','rust','c#','c++','kotlin','swift','ruby',
+                'spring','springboot','django','flask','fastapi','gin','express','koa','nestjs','mybatis',
+                'mysql','postgresql','mongodb','redis','elasticsearch','sql','oracle',
+                'docker','kubernetes','k8s','jenkins','git','linux','shell','nginx','ci/cd',
+                'pytorch','tensorflow','sklearn','scikit','pandas','numpy','hadoop','spark',
+                'selenium','jest','mocha','pytest',
+                'figma','photoshop','illustrator','axure','office','excel','ppt','word'
+            ];
+            const seen = new Set();
+            techKws.forEach(kw => {
+                if (rl.includes(kw) && !seen.has(kw)) { seen.add(kw); data.skills.push(_normSkill(kw)); }
+            });
+
+            // 技能检测 — 全行业通用（医疗/法学/教育/设计/金融等）
+            // 从"技能：xxx,xxx"行中提取
+            const skillLine = raw.match(/(?:技能|专业技能|职业技能)[：:]\s*([^\n]+)/i);
+            if (skillLine) {
+                skillLine[1].split(/[，,、;；\/]/).forEach(s => {
+                    const t = s.trim();
+                    if (t && t.length < 20 && !seen.has(t)) { seen.add(t); data.skills.push(t); }
+                });
+            }
+
+            // 证书/语言
+            if (rl.includes('cet-4') || raw.includes('四级')) data.softSkills.push('CET-4');
+            if (rl.includes('cet-6') || raw.includes('六级')) data.softSkills.push('CET-6');
+            if (raw.includes('雅思')) data.softSkills.push('雅思');
+            if (raw.includes('托福')) data.softSkills.push('托福');
+            if (raw.includes('计算机二级')) data.softSkills.push('计算机二级');
+            if (raw.includes('普通话')) data.softSkills.push('普通话');
+
+            // 项目/经历提取
+            const tagKw = ['项目','实习','课设','课程设计','大作业','毕设','毕业设计','比赛','竞赛','训练营','经历','实践','实训'];
+            for (const tk of tagKw) {
+                const re = new RegExp(`[^。\\n]*${tk}[^。\\n]*[。，,；;\\n]`, 'gi');
+                let m; while ((m = re.exec(raw)) !== null) { const t = m[0].trim().replace(/[。，,；;.\n]$/g,''); if (t.length > 8 && !data.projects.includes(t)) data.projects.push(t); }
+            }
+            if (data.projects.length === 0) {
+                const vr = /(独立|主导|负责|参与|完成|开发|设计|构建|搭建|实现|优化|重构|部署|上线|接诊|诊断|治疗|护理|分析|策划|撰写|翻译|主持|组织)[^。，,；;\n]{5,}[。，,；;\n]/g;
+                let m; while ((m = vr.exec(raw)) !== null && data.projects.length < 4) { const t = m[0].trim().replace(/[。，,；;.\n]$/g,''); if (!data.projects.includes(t)) data.projects.push(t); }
+            }
+
+            // 实习/公司
+            const coRe = /(\S{2,10}(?:公司|科技|集团|网络|软件|银行|证券|医院|事务所|律所|设计院|研究院|咨询|传媒))/g;
+            let cm2; while ((cm2 = coRe.exec(raw)) !== null) { if (!data.internships.includes(cm2[1])) data.internships.push(cm2[1]); }
+
+            // 荣誉
+            const awRe = /(国家奖学金|励志奖学金|一等奖学金|二等奖学金|三等奖学金|优秀学生|三好学生|优秀毕业生|优秀干部|优秀党员|\S+大赛\S*(?:一等奖|二等奖|三等奖|金奖|银奖|铜奖|冠军|亚军|季军)|省\S*奖|国\S*奖)/g;
+            let aw; while ((aw = awRe.exec(raw)) !== null) { if (!data.awards.includes(aw[0])) data.awards.push(aw[0]); }
+
+            // 证书
+            const ctRe = /(CET-[46]|大学英语[四六]级|计算机二级|普通话\S*|教师资格证|律师资格证|注册会计师|会计从业|证券从业|基金从业|银行从业|医师资格|护士执业|软考\S+)/gi;
+            let ct; while ((ct = ctRe.exec(raw)) !== null) { if (!data.certs.includes(ct[0])) data.certs.push(ct[0]); }
+
+            // 校园
+            const caRe = /(学生会|社团|志愿者|班干[部委]|团委|辩论队|艺术团|运动[队会])[^\n]{4,}[。\n]/g;
+            let ca; while ((ca = caRe.exec(raw)) !== null && data.campus.length < 3) { data.campus.push(ca[0].trim().replace(/[。.]$/,'').slice(0,50)); }
+
+            return data;
+        }
+
+        // --- 简历评分引擎 ---
+        function _scoreResume(data, targetJob) {
+            const score = { total:0, details:[], tips:[] };
+            const addDetail = (name, val, max, tip) => {
+                score.details.push({ name, val, max, pct: Math.round(val/max*100) });
+                score.total += val;
+            };
+            const addTip = (t) => score.tips.push(t);
+
+            // 1. 信息完整度（30分）
+            let infoScore = 0;
+            if (data.name) infoScore += 5; else addTip('缺少姓名，HR无法识别候选人');
+            if (data.phone) infoScore += 4; else addTip('缺少手机号，这是HR联系你的主要方式');
+            if (data.email) infoScore += 4; else addTip('缺少邮箱，建议补充（求职专用邮箱更佳）');
+            if (data.school) infoScore += 5; else addTip('缺少学校信息，教育背景是HR筛选的第一关');
+            if (data.major) infoScore += 4; else addTip('缺少专业信息，帮助HR判断专业匹配度');
+            if (data.degree) infoScore += 3;
+            if (data.gradYear) infoScore += 3; else addTip('缺少毕业年份，HR需要判断你是否在职');
+            if (data.gpa) infoScore += 2;
+            addDetail('信息完整度', infoScore, 30, null);
+
+            // 2. 技能匹配度（25分）
+            let skillScore = 0;
+            const skillCount = data.skills.length + data.softSkills.length;
+            if (skillCount >= 8) skillScore += 15;
+            else if (skillCount >= 5) skillScore += 12;
+            else if (skillCount >= 3) skillScore += 8;
+            else if (skillCount >= 1) skillScore += 4;
+            else addTip('几乎没有提到具体技能，HR无法评估你的技术能力');
+
+            // 目标岗位匹配加成
+            if (targetJob && skillCount > 0) {
+                const jl = targetJob.toLowerCase();
+                const matchCount = data.skills.filter(s => jl.includes(s.toLowerCase())).length;
+                skillScore += Math.min(matchCount * 3, 10);
+            } else if (!targetJob) {
+                addTip('填写目标职位可以获得更精准的技能匹配优化');
+            }
+            addDetail('技能匹配度', Math.min(skillScore, 25), 25, null);
+
+            // 3. 经历丰富度（25分）
+            let expScore = 0;
+            const projCount = data.projects.length;
+            const internCount = data.internships.length;
+            if (projCount >= 3) expScore += 12;
+            else if (projCount >= 2) expScore += 9;
+            else if (projCount >= 1) expScore += 6;
+            else addTip('缺少项目经历，这是应届生简历中最重要的部分');
+            if (internCount >= 1) expScore += 8; else addTip('缺少实习经历，有实习的应届生竞争力显著更高');
+            if (data.campus.length >= 1) expScore += 5;
+            addDetail('经历丰富度', Math.min(expScore, 25), 25, null);
+
+            // 4. 描述质量（10分）
+            let descScore = 0;
+            const hasNumbers = /\d+/.test(data.projects.join('') + data.internships.join(''));
+            const hasActionVerbs = /优化|重构|提升|降低|增加|减少|提升|节省|缩短|达到|覆盖/.test(data.projects.join(''));
+            if (hasNumbers) descScore += 5; else addTip('项目描述缺少量化数据，如"提升30%""覆盖200+用户"会让经历更有说服力');
+            if (hasActionVerbs) descScore += 3; else addTip('多用结果导向的动词：提升、降低、节省、缩短、覆盖等');
+            if (data.projects.some(p => p.length > 20)) descScore += 2;
+            addDetail('描述质量', Math.min(descScore, 10), 10, null);
+
+            // 5. 亮点加分（10分）
+            let bonusScore = 0;
+            if (data.awards.length >= 1) bonusScore += 4;
+            if (data.certs.length >= 1) bonusScore += 3;
+            if (data.courses.length >= 3) bonusScore += 2;
+            if (data.awards.some(a => a.includes('国家'))) bonusScore += 1;
+            addDetail('亮点加分', Math.min(bonusScore, 10), 10, null);
+
+            // 通用建议（如果没有特定tip）
+            if (data.projects.some(p => p.length < 15)) {
+                addTip('项目描述过于简短，建议展开：做了什么 → 怎么做的 → 结果如何');
+            }
+            if (score.tips.length === 0) addTip('简历整体不错，注意保持简洁，确保一页A4纸能放下');
+
+            return score;
+        }
+
+        // --- 主入口：诊断 / 一键优化 ---
+        function analyzeResume(mode) {
+            const raw = document.getElementById('originalResume').value.trim();
+            const targetJob = document.getElementById('targetJob').value.trim();
+            if (!raw) { showToast('请先填写简历内容'); return; }
+
+            const data = _extractResumeData(raw);
+            const score = _scoreResume(data, targetJob);
+
+            // 渲染评分面板
+            _renderScore(score);
+            // 渲染建议
+            _renderTips(score.tips);
+
+            if (mode === 'optimize') {
+                // 一键优化：同时生成简历
+                _generateOptimizedResume(data, targetJob, score);
+            }
+        }
+
+        // --- 渲染评分面板 ---
+        function _renderScore(score) {
+            document.getElementById('scoreEmpty').classList.add('hidden');
+            const el = document.getElementById('scoreContent');
+            el.classList.remove('hidden');
+
+            const grade = score.total >= 85 ? { label:'A', color:'#22C55E', bg:'#F0FDF4', text:'优秀' }
+                       : score.total >= 70 ? { label:'B+', color:'#165DFF', bg:'#EEF2FF', text:'良好' }
+                       : score.total >= 55 ? { label:'B', color:'#F59E0B', bg:'#FFFBEB', text:'中等' }
+                       : score.total >= 40 ? { label:'C+', color:'#F97316', bg:'#FFF7ED', text:'待改进' }
+                       : { label:'C', color:'#EF4444', bg:'#FEF2F2', text:'需加强' };
+
+            el.innerHTML = `
+            <div style="text-align:center;margin-bottom:1rem;">
+                <div style="width:64px;height:64px;border-radius:50%;background:${grade.bg};color:${grade.color};font-size:1.8rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;border:3px solid ${grade.color};">${grade.label}</div>
+                <div style="font-size:1.4rem;font-weight:700;color:#1a1a1a;margin-top:0.5rem;">${score.total}<span style="font-size:0.8rem;color:#999;"> / 100</span></div>
+                <div style="font-size:0.8rem;color:${grade.color};">${grade.text}</div>
+            </div>
+            <div style="space-y:0.4rem;">
+                ${score.details.map(d => `
+                <div style="margin-bottom:0.5rem;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:0.2rem;">
+                        <span style="color:#555;">${d.name}</span>
+                        <span style="color:#333;font-weight:600;">${d.val}/${d.max}</span>
+                    </div>
+                    <div style="height:6px;background:#F0F0F0;border-radius:3px;overflow:hidden;">
+                        <div style="height:100%;width:${d.pct}%;background:${d.pct>=80?'#22C55E':d.pct>=60?'#165DFF':d.pct>=40?'#F59E0B':'#EF4444'};border-radius:3px;transition:width 0.5s;"></div>
+                    </div>
+                </div>`).join('')}
+            </div>`;
+        }
+
+        // --- 渲染建议 ---
+        function _renderTips(tips) {
+            const panel = document.getElementById('tipsPanel');
+            const list = document.getElementById('tipsList');
+            if (tips.length) {
+                panel.classList.remove('hidden');
+                list.innerHTML = tips.map(t => `<li>${t}</li>`).join('');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        // --- 生成HR级简历输出 ---
+        function _generateOptimizedResume(data, targetJob) {
+            const raw = document.getElementById('originalResume').value;
+            const accent = '#165DFF';
+
+            // ====== 兜底：从原始文本提取未识别的技能/经历 ======
+            // 如果技能为空但有"技能："行，直接提取
+            if (data.skills.length === 0) {
+                const sl = raw.match(/(?:技能|专业技能|职业技能)[：:]\s*([^\n]+)/i);
+                if (sl) {
+                    sl[1].split(/[，,、;；\/]/).forEach(s => {
+                        const t = s.trim();
+                        if (t && t.length < 20 && !data.skills.includes(t)) data.skills.push(t);
+                    });
+                }
+            }
+            // 如果项目为空但有"经历："行，直接提取
+            if (data.projects.length === 0) {
+                const el = raw.match(/(?:经历|实践经历|实习经历|工作(?:\/项目)经历)[：:]\s*([^\n]+(?:\n[^\n]+){0,3})/i);
+                if (el) {
+                    el[1].split(/[。\n]/).forEach(s => {
+                        const t = s.trim().replace(/[。，,；;.\n]$/g,'');
+                        if (t.length > 5 && !data.projects.includes(t)) data.projects.push(t);
+                    });
+                }
+            }
+
+            // ====== 个人信息头部 ======
+            const contactLine = [data.phone, data.email].filter(Boolean).join('  |  ');
+            const infoLine = [data.school, data.degree, data.major, data.gradYear ? data.gradYear + '届' : ''].filter(Boolean).join('  ·  ');
+            const headerHtml = `
+            <div style="border-bottom:2px solid ${accent};padding-bottom:0.8rem;margin-bottom:1.2rem;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                        <div style="font-size:1.5rem;font-weight:800;color:#111;letter-spacing:0.05em;">${data.name || '（未填写姓名）'}</div>
+                        ${contactLine ? `<div style="color:#666;font-size:0.82rem;margin-top:0.3rem;">${contactLine}</div>` : ''}
+                        ${infoLine ? `<div style="color:#888;font-size:0.8rem;margin-top:0.2rem;">${infoLine}</div>` : ''}
+                    </div>
+                    ${targetJob ? `<div style="background:${accent};color:white;padding:3px 14px;border-radius:4px;font-size:0.78rem;white-space:nowrap;">${targetJob}</div>` : ''}
+                </div>
+            </div>`;
+
+            // ====== 教育背景 ======
+            let eduHtml = '';
+            if (data.school || data.major) {
+                const parts = [data.school, data.degree, data.major, data.gradYear ? data.gradYear + '届' : ''].filter(Boolean);
+                eduHtml = `
+            <div style="margin-bottom:1rem;">
+                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">教育背景</div>
+                <div style="color:#333;font-size:0.88rem;padding-left:11px;">
+                    ${parts.join('  ·  ')}${data.gpa ? '  ·  GPA ' + data.gpa : ''}
+                </div>
+                ${data.courses.length ? `<div style="color:#888;font-size:0.8rem;padding-left:11px;margin-top:0.2rem;">主修课程：${data.courses.slice(0,6).join('、')}${data.courses.length>6?' 等':''}</div>` : ''}
+            </div>`;
+            }
+
+            // ====== 专业技能 ======
+            let skillHtml = '';
+            if (data.skills.length || data.softSkills.length) {
+                const allSkills = [...data.skills];
+                if (data.softSkills.length) allSkills.push(...data.softSkills);
+                skillHtml = `
+            <div style="margin-bottom:1rem;">
+                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">专业技能</div>
+                <div style="color:#333;font-size:0.88rem;padding-left:11px;line-height:1.7;">
+                    ${allSkills.join('  /  ')}
+                </div>
+            </div>`;
+            }
+
+            // ====== 实习经历 ======
+            let internHtml = '';
+            if (data.internships.length > 0) {
+                const internItems = data.internships.map(co => {
+                    const idx = raw.indexOf(co);
+                    let ctx = '';
+                    if (idx >= 0) {
+                        const start = Math.max(0, idx - 5);
+                        const end = Math.min(raw.length, idx + co.length + 80);
+                        const seg = raw.slice(start, end).split(/[。\n]/)[0];
+                        ctx = seg.length > 10 ? seg.trim() : '';
+                    }
+                    return `<div style="margin-bottom:0.6rem;">
+                        <div style="font-weight:600;color:#333;font-size:0.88rem;">${co}</div>
+                        ${ctx ? `<div style="color:#666;font-size:0.82rem;padding-left:8px;margin-top:0.15rem;">${ctx}</div>` : ''}
+                    </div>`;
+                }).join('');
+                internHtml = `
+            <div style="margin-bottom:1rem;">
+                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">实习经历</div>
+                <div style="padding-left:11px;">${internItems}</div>
+            </div>`;
+            }
+
+            // ====== 项目/实践经历 ======
+            let projHtml = '';
+            if (data.projects.length > 0) {
+                const projItems = data.projects.map((p, i) => {
+                    const techMentioned = data.skills.filter(s => p.toLowerCase().includes(s.toLowerCase()));
+                    const techStr = techMentioned.length ? `涉及：${techMentioned.join('、')}` : '';
+                    const clean = p.replace(/^(独立|主导|负责|参与|完成|作为)\s*/, '');
+                    return `<div style="margin-bottom:0.65rem;">
+                        <div style="font-weight:600;color:#333;font-size:0.88rem;">${clean.length>60 ? clean.slice(0,60)+'...' : clean}</div>
+                        ${techStr ? `<div style="color:#999;font-size:0.78rem;padding-left:8px;margin-top:0.1rem;">${techStr}</div>` : ''}
+                    </div>`;
+                }).join('');
+                projHtml = `
+            <div style="margin-bottom:1rem;">
+                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">实践经历</div>
+                <div style="padding-left:11px;">${projItems}</div>
+            </div>`;
+            }
+
+            // ====== 校园经历 ======
+            let campusHtml = '';
+            if (data.campus.length) {
+                campusHtml = `
+            <div style="margin-bottom:1rem;">
+                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">校园经历</div>
+                <div style="padding-left:11px;font-size:0.85rem;color:#555;">
+                    ${data.campus.map(c => `<div style="margin-bottom:0.3rem;">· ${c}</div>`).join('')}
+                </div>
+            </div>`;
+            }
+
+            // ====== 荣誉证书 ======
+            let honorHtml = '';
+            const allHonors = [...new Set([...data.awards, ...data.certs])];
+            if (allHonors.length) {
+                honorHtml = `
+            <div style="margin-bottom:1rem;">
+                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">荣誉证书</div>
+                <div style="padding-left:11px;font-size:0.85rem;color:#555;">
+                    ${allHonors.map(h => `<div style="margin-bottom:0.2rem;">· ${h}</div>`).join('')}
+                </div>
+            </div>`;
+            }
+
+            // ====== 自我评价（克制、基于事实）======
+            let evalLines = [];
+            if (data.school && data.major) evalLines.push(`${data.school}${data.major}专业${data.degree||'在读'}${data.gradYear?'，'+data.gradYear+'届毕业生':''}`);
+            if (data.skills.length >= 1) {
+                const topN = data.skills.slice(0, 5).join('、');
+                evalLines.push(`掌握${topN}${data.skills.length>5?'等':''}相关技能`);
+            }
+            if (data.projects.length >= 1) evalLines.push(`具备${data.projects.length}段实践经历，能独立完成分配的工作任务`);
+            if (data.internships.length >= 1) evalLines.push(`有${data.internships[0]}等实习/工作经历`);
+            if (data.awards.length >= 1) evalLines.push(`曾获${data.awards[0]}等荣誉`);
+            if (evalLines.length < 2) evalLines.push('具备良好的学习能力与团队协作精神，工作态度认真负责');
+            evalLines.push('善于自主学习，注重工作规范与细节');
+
+            const evalHtml = `
+            <div style="margin-bottom:0.5rem;">
+                <div style="font-weight:700;color:${accent};font-size:0.92rem;margin-bottom:0.35rem;border-left:3px solid ${accent};padding-left:8px;">自我评价</div>
+                <div style="padding-left:11px;font-size:0.85rem;color:#555;line-height:1.8;">
+                    ${evalLines.join('。')}。
+                </div>
+            </div>`;
+
+            // ====== 组装 ======
+            document.getElementById('optimizeEmpty').classList.add('hidden');
+            document.getElementById('optimizeResult').classList.remove('hidden');
+            document.getElementById('optimizedResumeContent').innerHTML = `
+            <div id="resumeOutput" style="font-family:'PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;max-width:680px;margin:0 auto;padding:1.5rem 2rem;background:#fff;color:#333;line-height:1.6;font-size:0.9rem;">
+                ${headerHtml}
+                ${eduHtml}
+                ${skillHtml}
+                ${internHtml}
+                ${projHtml}
+                ${campusHtml}
+                ${honorHtml}
+                ${evalHtml}
+            </div>`;
+        }
+
+        // --- 复制为纯文本（HR友好格式）---
+        function copyOptimizedResume() {
+            const el = document.getElementById('resumeOutput');
+            if (!el) { showToast('请先生成简历'); return; }
+            const text = el.innerText;
+            navigator.clipboard.writeText(text).then(() => showToast('已复制，可直接粘贴到邮件/文档')).catch(() => {
+                // fallback
+                const ta = document.createElement('textarea');
+                ta.value = text; document.body.appendChild(ta);
+                ta.select(); document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('已复制');
+            });
+        }
+
+        // --- 导出PDF ---
+        function exportResumePDF() {
+            const el = document.getElementById('resumeOutput');
+            if (!el) { showToast('请先生成简历'); return; }
+            const pw = window.open('', '_blank');
+            pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>简历</title>
+            <style>
+                @page { size: A4; margin: 15mm; }
+                body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; color: #333; font-size: 11pt; line-height: 1.6; }
+                div { max-width: 100%; }
+            </style></head><body>${el.innerHTML}</body></html>`);
+            pw.document.close();
+            setTimeout(() => { pw.print(); }, 500);
+            showToast('已打开打印窗口，选择"另存为PDF"即可');
+        }
+
+        // --- 高质量示例 ---
+        function fillDemoResume() {
+            document.getElementById('targetJob').value = '前端开发工程师';
+            document.getElementById('originalResume').value = `张明轩
+13800138000  zhangmx@email.com
+
+北京理工大学  计算机科学与技术  本科  2026届  GPA 3.7/4.0
+主修课程：数据结构、计算机网络、操作系统、Web前端开发、数据库原理
+
+熟练掌握JavaScript、TypeScript、React、Vue、Node.js、HTML/CSS
+熟悉MySQL、MongoDB、Redis、Git、Linux、Webpack
+CET-6 雅思6.5
+
+2025.07-2025.12 字节跳动  前端开发实习生
+负责公司内部效率工具的前端开发，使用React+TypeScript重构旧版管理系统，将首屏加载时间从3.2s优化至1.1s。独立开发数据看板模块，使用ECharts实现6种图表类型，服务200+内部用户日常使用。参与团队组件库建设，封装并维护15个通用业务组件。
+
+2025.03-2025.06 职配AI大学生求职智能匹配系统 项目负责人
+独立设计并开发基于TF-IDF算法的岗位匹配引擎，使用JavaScript实现前端页面，支持响应式布局与移动端适配。项目部署于GitHub Pages，累计获得500+访问量。使用Node.js搭建轻量后端服务，实现用户信息管理与匹配结果缓存。
+
+2024.09-2024.12 校园二手交易平台  核心开发者
+使用Vue3+Vite开发前端界面，实现商品发布、搜索、在线聊天等功能。采用WebSocket实现实时消息推送，消息延迟控制在100ms以内。后端使用Express+MySQL，支持500+并发用户同时在线。
+
+2023-2024学年 国家奖学金（专业前2%）
+2024 蓝桥杯全国软件大赛 省赛二等奖
+2023 校三好学生  优秀学生干部
+学生会技术部部长，组织3场编程培训活动，覆盖200+同学`;
+        }
+
+        // ============================================================
+        // AI聊天框
+        // ============================================================
+        const chatToggle = document.getElementById('chatToggle');
+        const chatWindow = document.getElementById('chatWindow');
+        const chatMinimize = document.getElementById('chatMinimize');
+        const chatClose = document.getElementById('chatClose');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const quickQuestions = document.querySelectorAll('.quick-question');
+
+        chatToggle.addEventListener('click', () => {
+            chatWindow.classList.toggle('scale-0');
+            chatWindow.classList.toggle('scale-100');
+        });
+        // [FIX-P1] chatMinimize 绑定修正
+        chatMinimize.addEventListener('click', () => chatToggle.click());
+        chatClose.addEventListener('click', () => {
+            chatWindow.classList.add('scale-0');
+            chatWindow.classList.remove('scale-100');
+        });
+
+        function addMsg(text, type) {
+            const wrap = document.createElement('div');
+            wrap.className = type === 'user' ? 'flex justify-end' : 'flex justify-start';
+            const cls = type === 'user' ? 'bg-primary text-white rounded-lg rounded-tr-none' : 'bg-gray-100 rounded-lg rounded-tl-none';
+            wrap.innerHTML = `<div class="${cls} px-4 py-3 max-w-[80%] whitespace-pre-wrap">${text}</div>`;
+            chatMessages.appendChild(wrap);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTyping() {
+            const d = document.createElement('div');
+            d.id = 'typing';
+            d.className = 'flex justify-start';
+            d.innerHTML = `<div class="bg-gray-100 rounded-lg rounded-tl-none px-4 py-3"><div class="typing-indicator flex space-x-1"><span class="w-2 h-2 bg-gray-400 rounded-full"></span><span class="w-2 h-2 bg-gray-400 rounded-full"></span><span class="w-2 h-2 bg-gray-400 rounded-full"></span></div></div>`;
+            chatMessages.appendChild(d);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTyping() {
+            const d = document.getElementById('typing');
+            if (d) d.remove();
+        }
+
+        async function sendChat() {
+            let q = chatInput.value.trim();
+            if (!q) return;
+            addMsg(q, 'user');
+            chatInput.value = '';
+            showTyping();
+            try {
+                // [FIX-任务5] 全局异常捕获
+                let res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: q })
+                });
+                let data = await res.json();
+                removeTyping();
+                addMsg(data.answer, 'ai');
+            } catch (e) {
+                removeTyping();
+                addMsg('连接后端服务失败，请检查 Ollama 和 python 服务是否正常启动。\n若在局域网访问，请确认：\n1. 服务已启动（python app.py）\n2. 端口未被防火墙拦截\n3. 访问地址为 http://[本机IP]:5000', 'ai');
+            }
+        }
+
+        // 移动端菜单
+        function openMobileMenu() {
+            const saved = localStorage.getItem('zhipeiMobileSidebar');
+            document.getElementById('mobileSidebar').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('mobileSidebarContent').classList.remove('translate-x-full');
+            }, 10);
+        }
+        function closeMobileMenu() {
+            document.getElementById('mobileSidebarContent').classList.add('translate-x-full');
+            setTimeout(() => {
+                document.getElementById('mobileSidebar').classList.add('hidden');
+            }, 300);
+            // [FIX-任务6] 记忆侧边栏关闭状态
+            try { localStorage.setItem('zhipeiMobileSidebar', 'closed'); } catch(e) {}
+        }
+        document.getElementById('mobileMenuBtn').addEventListener('click', openMobileMenu);
+
+        sendBtn.addEventListener('click', sendChat);
+        chatInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendChat(); });
+        quickQuestions.forEach(btn => btn.addEventListener('click', () => { chatInput.value = btn.textContent; sendChat(); }));
+
+        // ============================================================
+        // [FIX-任务7] 一键演示多行业
+        // ============================================================
+        document.getElementById('demoBtn').addEventListener('click', () => {
+            document.getElementById('demoDropdown').classList.toggle('hidden');
+        });
+        document.addEventListener('click', e => {
+            if (!document.getElementById('demoBtnWrap').contains(e.target)) closeDemoDropdown();
+        });
+        function closeDemoDropdown() {
+            document.getElementById('demoDropdown').classList.add('hidden');
+        }
+        function runDemo(type) {
+            closeDemoDropdown();
+            showPage('match');
+            setTimeout(() => {
+                fillDemoData(type);
+                setTimeout(() => {
+                    const firstResult = document.querySelector('#recommendedJobs button');
+                    if (firstResult) firstResult.click();
+                }, 800);
+            }, 500);
+        }
+
+        // ============================================================
+        // [FIX-任务5] 横竖屏切换自动重排
+        // ============================================================
+        window.addEventListener('orientationchange', () => {
+            closeJobSidePanel();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // ============================================================
+        // [FIX-任务5] 全局异常捕获兜底
+        // ============================================================
+        window.addEventListener('error', e => {
+            console.error('全局异常:', e.message, e.filename, e.lineno);
+        });
+        window.addEventListener('unhandledrejection', e => {
+            console.warn('未处理Promise异常:', e.reason);
+        });
+    </script>
+</body>
+</html>
