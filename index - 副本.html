@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>职配AI - 大学生求职智能决策助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        accent: '#8b5cf6',
+                        danger: '#ef4444',
+                        warning: '#f59e0b',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+            .skeleton {
+                background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+                background-size: 200% 100%;
+                animation: skeleton-loading 1.5s infinite;
+            }
+            @keyframes skeleton-loading {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
+            }
+            .fade-in {
+                animation: fadeIn 0.3s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            .slide-up {
+                animation: slideUp 0.3s ease-in-out;
+            }
+            @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            .number-scroll {
+                display: inline-block;
+            }
+            .btn-loading {
+                position: relative;
+                color: transparent !important;
+            }
+            .btn-loading::after {
+                content: "";
+                position: absolute;
+                width: 20px;
+                height: 20px;
+                top: 50%;
+                left: 50%;
+                margin-left: -10px;
+                margin-top: -10px;
+                border: 2px solid #ffffff;
+                border-top-color: transparent;
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+            }
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-md sticky top-0 z-50 transition-all duration-300" id="navbar">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="#" class="flex items-center space-x-2" onclick="showPage('home')">
+                <i class="fas fa-briefcase text-primary text-2xl"></i>
+                <span class="text-xl font-bold text-primary">职配AI</span>
+            </a>
+            
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#" class="nav-link text-gray-600 hover:text-primary transition-colors" onclick="showPage('home')">首页</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-primary transition-colors" onclick="showPage('match')">智能匹配</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-primary transition-colors" onclick="showPage('jobs')">职位库</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-primary transition-colors" onclick="showPage('resume')">简历优化</a>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <button id="demoBtn" class="hidden md:block px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors">
+                    一键演示
+                </button>
+                <button class="md:hidden text-gray-600 text-xl" onclick="toggleMobileMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 移动端菜单 -->
+        <div id="mobileMenu" class="md:hidden hidden bg-white border-t">
+            <div class="container mx-auto px-4 py-3 flex flex-col space-y-4">
+                <a href="#" class="text-gray-600 hover:text-primary py-2 transition-colors" onclick="showPage('home'); toggleMobileMenu()">首页</a>
+                <a href="#" class="text-gray-600 hover:text-primary py-2 transition-colors" onclick="showPage('match'); toggleMobileMenu()">智能匹配</a>
+                <a href="#" class="text-gray-600 hover:text-primary py-2 transition-colors" onclick="showPage('jobs'); toggleMobileMenu()">职位库</a>
+                <a href="#" class="text-gray-600 hover:text-primary py-2 transition-colors" onclick="showPage('resume'); toggleMobileMenu()">简历优化</a>
+                <button class="px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors" onclick="fillDemoData()">
+                    一键演示
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow">
+        <!-- 首页 -->
+        <div id="homePage" class="page fade-in">
+            <!-- 英雄区 -->
+            <section class="bg-gradient-to-r from-primary to-accent text-white py-16 md:py-24">
+                <div class="container mx-auto px-4 text-center">
+                    <h1 class="text-3xl md:text-5xl font-bold mb-6">大学生求职智能决策助手</h1>
+                    <p class="text-lg md:text-xl mb-8 max-w-2xl mx-auto opacity-90">
+                        AI驱动的个性化求职方案，帮你精准匹配岗位，优化简历，轻松拿到心仪offer
+                    </p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <button class="px-8 py-3 bg-white text-primary font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg" onclick="showPage('match')">
+                            开始智能匹配
+                        </button>
+                        <button class="px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors" onclick="showPage('jobs')">
+                            浏览职位库
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 统计数据 -->
+            <section class="py-12 bg-white">
+                <div class="container mx-auto px-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                        <div class="p-6">
+                            <div class="text-4xl font-bold text-primary mb-2" data-target="50">50+</div>
+                            <p class="text-gray-600">热门职位</p>
+                        </div>
+                        <div class="p-6">
+                            <div class="text-4xl font-bold text-primary mb-2" data-target="20">20+</div>
+                            <p class="text-gray-600">合作企业</p>
+                        </div>
+                        <div class="p-6">
+                            <div class="text-4xl font-bold text-primary mb-2" data-target="95">95%</div>
+                            <p class="text-gray-600">匹配准确率</p>
+                        </div>
+                        <div class="p-6">
+                            <div class="text-4xl font-bold text-primary mb-2" data-target="10000">10000+</div>
+                            <p class="text-gray-600">服务学生</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 功能介绍 -->
+            <section class="py-16 bg-gray-50">
+                <div class="container mx-auto px-4">
+                    <h2 class="text-3xl font-bold text-center mb-12">核心功能</h2>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                            <div class="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                                <i class="fas fa-brain text-primary text-2xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-3">智能岗位匹配</h3>
+                            <p class="text-gray-600">基于你的技能、经验和意向，通过加权算法精准匹配最适合你的职位</p>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                            <div class="w-14 h-14 bg-secondary/10 rounded-full flex items-center justify-center mb-6">
+                                <i class="fas fa-file-alt text-secondary text-2xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-3">AI简历优化</h3>
+                            <p class="text-gray-600">自动提取JD关键词，对比你的简历，生成可直接复制的优化建议</p>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                            <div class="w-14 h-14 bg-accent/10 rounded-full flex items-center justify-center mb-6">
+                                <i class="fas fa-robot text-accent text-2xl"></i>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-3">AI求职助手</h3>
+                            <p class="text-gray-600">24小时在线解答你的求职疑问，提供个性化的面试准备建议</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 热门企业 -->
+            <section class="py-16 bg-white">
+                <div class="container mx-auto px-4">
+                    <h2 class="text-3xl font-bold text-center mb-12">2026届校招热门企业</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6" id="companiesGrid">
+                        <!-- 企业卡片将通过JS动态生成 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 如何使用 -->
+            <section class="py-16 bg-gray-50">
+                <div class="container mx-auto px-4">
+                    <h2 class="text-3xl font-bold text-center mb-12">三步开启求职之旅</h2>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">1</div>
+                            <h3 class="text-xl font-semibold mb-3">填写个人信息</h3>
+                            <p class="text-gray-600">输入你的专业、技能、经历和求职意向</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">2</div>
+                            <h3 class="text-xl font-semibold mb-3">获取匹配结果</h3>
+                            <p class="text-gray-600">系统自动分析并为你推荐最匹配的职位</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">3</div>
+                            <h3 class="text-xl font-semibold mb-3">优化简历准备面试</h3>
+                            <p class="text-gray-600">根据建议优化简历，针对性准备面试</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 智能匹配页面 -->
+        <div id="matchPage" class="page hidden fade-in">
+            <section class="py-12">
+                <div class="container mx-auto px-4">
+                    <h1 class="text-3xl font-bold text-center mb-8">智能岗位匹配</h1>
+                    <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md p-6 md:p-8">
+                        <form id="matchForm" class="space-y-6">
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">姓名</label>
+                                    <input type="text" id="name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="请输入你的姓名" required>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">学校</label>
+                                    <input type="text" id="school" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="请输入你的学校" required>
+                                </div>
+                            </div>
+                            
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">专业</label>
+                                    <input type="text" id="major" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="请输入你的专业" required>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">毕业年份</label>
+                                    <select id="gradYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" required>
+                                        <option value="">请选择</option>
+                                        <option value="2025">2025届</option>
+                                        <option value="2026" selected>2026届</option>
+                                        <option value="2027">2027届</option>
+                                        <option value="2028">2028届</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">求职意向</label>
+                                <input type="text" id="intention" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="如：前端开发、数据分析、产品经理" required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">技能特长（用逗号分隔）</label>
+                                <textarea id="skills" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="如：HTML, CSS, JavaScript, React, Python, SQL" required></textarea>
+                                <div class="text-right text-sm text-gray-500 mt-1"><span id="skillsCount">0</span>字</div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">项目/实习经历</label>
+                                <textarea id="experience" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="请详细描述你的项目或实习经历" required></textarea>
+                                <div class="text-right text-sm text-gray-500 mt-1"><span id="experienceCount">0</span>字</div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">期望工作地点</label>
+                                <input type="text" id="location" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="如：北京、上海、广州、深圳、全国均可" required>
+                            </div>
+                            
+                            <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                                <button type="button" id="resetMatchBtn" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex-1">
+                                    重置表单
+                                </button>
+                                <button type="submit" id="matchSubmitBtn" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex-1">
+                                    开始智能匹配
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- 匹配结果区域 -->
+                    <div id="matchResults" class="max-w-5xl mx-auto mt-12 hidden fade-in">
+                        <h2 class="text-2xl font-bold text-center mb-8">匹配结果</h2>
+                        <div id="matchResultsGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- 匹配结果将通过JS动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 职位库页面 -->
+        <div id="jobsPage" class="page hidden fade-in">
+            <section class="py-12">
+                <div class="container mx-auto px-4">
+                    <h1 class="text-3xl font-bold text-center mb-8">职位库</h1>
+                    
+                    <!-- 标签页 -->
+                    <div class="flex justify-center mb-8">
+                        <div class="inline-flex bg-white rounded-lg shadow-sm p-1">
+                            <button id="allJobsTab" class="px-6 py-2 rounded-lg bg-primary text-white transition-colors" onclick="showJobsTab('all')">全部职位</button>
+                            <button id="savedJobsTab" class="px-6 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors" onclick="showJobsTab('saved')">我的收藏</button>
+                        </div>
+                    </div>
+                    
+                    <div id="jobsGrid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- 职位卡片将通过JS动态生成 -->
+                    </div>
+                    
+                    <div id="noSavedJobs" class="text-center py-16 hidden">
+                        <i class="fas fa-bookmark text-gray-300 text-6xl mb-4"></i>
+                        <p class="text-gray-500 text-lg">暂无收藏的职位</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 简历优化页面 -->
+        <div id="resumePage" class="page hidden fade-in">
+            <section class="py-12">
+                <div class="container mx-auto px-4">
+                    <h1 class="text-3xl font-bold text-center mb-8">AI简历优化</h1>
+                    <div class="max-w-4xl mx-auto">
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <div class="bg-white rounded-xl shadow-md p-6">
+                                <h2 class="text-xl font-semibold mb-4">目标职位JD</h2>
+                                <textarea id="jdInput" rows="12" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="请粘贴目标职位的完整招聘描述"></textarea>
+                                <div class="text-right text-sm text-gray-500 mt-1"><span id="jdCount">0</span>字</div>
+                            </div>
+                            
+                            <div class="bg-white rounded-xl shadow-md p-6">
+                                <h2 class="text-xl font-semibold mb-4">你的简历</h2>
+                                <textarea id="resumeInput" rows="12" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="请粘贴你的完整简历内容"></textarea>
+                                <div class="text-right text-sm text-gray-500 mt-1"><span id="resumeCount">0</span>字</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row gap-4 mt-8 justify-center">
+                            <button type="button" id="resetResumeBtn" class="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                                重置表单
+                            </button>
+                            <button id="optimizeBtn" class="px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                                生成优化建议
+                            </button>
+                        </div>
+                        
+                        <!-- 优化结果区域 -->
+                        <div id="optimizeResults" class="mt-12 hidden fade-in">
+                            <!-- 优化结果将通过JS动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 企业详情页面 -->
+        <div id="companyPage" class="page hidden fade-in">
+            <section class="py-12">
+                <div class="container mx-auto px-4">
+                    <button onclick="showPage('home')" class="mb-6 flex items-center text-primary hover:text-primary/80 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i> 返回首页
+                    </button>
+                    
+                    <div id="companyDetails" class="bg-white rounded-xl shadow-md p-6 md:p-8">
+                        <!-- 企业详情将通过JS动态生成 -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- 职位分析面板（电脑端） -->
+    <div id="jobAnalysisPanel" class="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-40 overflow-y-auto">
+        <div class="p-6">
+            <button onclick="closeJobAnalysisPanel()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div id="jobAnalysisContent">
+                <!-- 职位分析内容将通过JS动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 职位分析模态框（移动端） -->
+    <div id="jobAnalysisModal" class="fixed inset-0 bg-black/50 z-50 hidden fade-in">
+        <div class="absolute inset-0 bg-white overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 id="mobileJobTitle" class="text-xl font-bold"></h2>
+                    <button onclick="closeJobAnalysisModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div id="mobileJobAnalysisContent">
+                    <!-- 移动端职位分析内容将通过JS动态生成 -->
+                </div>
+                <button onclick="closeJobAnalysisModal()" class="w-full mt-8 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI求职助手聊天窗口 -->
+    <div id="chatWindow" class="fixed bottom-20 right-4 w-[90vw] md:w-[400px] h-[70vh] bg-white rounded-xl shadow-2xl z-40 hidden flex flex-col fade-in">
+        <div class="bg-primary text-white p-4 rounded-t-xl flex justify-between items-center">
+            <h3 class="font-semibold">职配AI求职助手</h3>
+            <div class="flex space-x-3">
+                <button onclick="minimizeChatWindow()" class="hover:text-gray-200">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button onclick="closeChatWindow()" class="hover:text-gray-200">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div id="chatMessages" class="flex-grow p-4 overflow-y-auto scrollbar-hide">
+            <div class="mb-4">
+                <div class="bg-gray-100 rounded-lg rounded-tl-none p-3 max-w-[80%]">
+                    你好！我是职配AI求职助手，有什么可以帮你的吗？
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-4 border-t">
+            <div class="flex flex-wrap gap-2 mb-4">
+                <button class="px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200 transition-colors" onclick="sendQuickMessage('我不会Python能应聘这个岗位吗？')">
+                    我不会Python能应聘这个岗位吗？
+                </button>
+                <button class="px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200 transition-colors" onclick="sendQuickMessage('这个岗位面试会问什么？')">
+                    这个岗位面试会问什么？
+                </button>
+                <button class="px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200 transition-colors" onclick="sendQuickMessage('我的简历应该怎么写？')">
+                    我的简历应该怎么写？
+                </button>
+                <button class="px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200 transition-colors" onclick="sendQuickMessage('这个岗位发展前景怎么样？')">
+                    这个岗位发展前景怎么样？
+                </button>
+                <button class="px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200 transition-colors" onclick="sendQuickMessage('应届生薪资多少合适？')">
+                    应届生薪资多少合适？
+                </button>
+            </div>
+            
+            <div class="flex gap-2">
+                <input type="text" id="chatInput" class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="输入你的问题...">
+                <button id="sendChatBtn" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关于我们模态框 -->
+    <div id="aboutModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center fade-in">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 slide-up">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">关于职配AI</h3>
+                <button onclick="closeAboutModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <p class="text-gray-600 mb-4">
+                职配AI是专为大学生打造的求职智能决策助手，旨在解决大学生求职过程中海投无效、简历不匹配、不知道如何准备等痛点。系统通过AI技术分析你的技能和经历，为你提供个性化的岗位匹配、简历优化建议和求职准备指导，帮助你更高效地找到适合自己的工作。
+            </p>
+            <p class="text-gray-600 mb-2"><strong>开发者：</strong>豆包AI</p>
+            <p class="text-gray-600"><strong>项目时间：</strong>2026年6月</p>
+        </div>
+    </div>
+
+    <!-- 错误提示框 -->
+    <div id="errorToast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-danger text-white px-6 py-3 rounded-lg shadow-lg z-50 hidden fade-in">
+        操作失败，请稍后重试
+    </div>
+
+    <!-- 聊天按钮 -->
+    <button id="chatBtn" class="fixed bottom-4 right-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center z-30">
+        <i class="fas fa-comments text-xl"></i>
+    </button>
+
+    <!-- 回到顶部按钮 -->
+    <button id="backToTopBtn" class="fixed bottom-4 left-4 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary/90 transition-colors flex items-center justify-center z-30 hidden fade-in">
+        <i class="fas fa-arrow-up text-xl"></i>
+    </button>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-briefcase text-primary text-2xl"></i>
+                        <span class="text-xl font-bold">职配AI</span>
+                    </div>
+                    <p class="text-gray-400 mt-2">大学生求职智能决策助手</p>
+                </div>
+                
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors" onclick="showAboutModal()">关于我们</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">使用帮助</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">隐私政策</a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400">
+                © 2026 职配AI. 保留所有权利.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ==================== 全局数据 ====================
+        // 职位库（50个职位）
+        const jobs = [
+            // 前端开发 (1-5)
+            { id: 1, title: "前端开发实习生", company: "字节跳动", location: "北京", salary: "200-300/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["HTML", "CSS", "JavaScript", "React", "Vue"], experience: ["前端开发", "项目经验"], major: ["计算机科学与技术", "软件工程", "信息工程"],
+              description: "负责公司产品的前端页面开发和维护，参与产品需求讨论和技术方案设计",
+              advantages: ["大厂实习证明", "导师一对一指导", "免费三餐下午茶", "转正机会"],
+              disadvantages: ["工作强度较大", "北京生活成本高"],
+              interviewQuestions: ["介绍一下盒模型", "什么是虚拟DOM", "React和Vue的区别", "如何实现跨域"] },
+            { id: 2, title: "前端开发工程师（校招）", company: "腾讯", location: "深圳", salary: "18-25K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["HTML", "CSS", "JavaScript", "React", "TypeScript"], experience: ["前端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责微信生态相关产品的前端开发工作，参与技术架构设计和性能优化",
+              advantages: ["腾讯正式编制", "完善的培训体系", "优厚的福利待遇", "稳定的工作环境"],
+              disadvantages: ["竞争激烈", "流程相对繁琐"],
+              interviewQuestions: ["闭包的概念和用途", "原型链的理解", "浏览器的渲染过程", "性能优化的方法"] },
+            { id: 3, title: "Web前端开发", company: "阿里云", location: "杭州", salary: "20-28K/月", type: "全职", publishTime: "2026-06-03", 
+              skills: ["HTML", "CSS", "JavaScript", "Vue", "Node.js"], experience: ["前端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责阿里云控制台的前端开发和优化，提升用户体验和系统性能",
+              advantages: ["阿里技术体系", "广阔的发展空间", "丰厚的年终奖", "完善的福利"],
+              disadvantages: ["杭州房价较高", "加班较多"],
+              interviewQuestions: ["Vue的响应式原理", "Vuex的使用", "前端工程化的理解", "如何处理大数据渲染"] },
+            { id: 4, title: "前端开发工程师", company: "华为", location: "深圳", salary: "19-26K/月", type: "校招", publishTime: "2026-05-30", 
+              skills: ["HTML", "CSS", "JavaScript", "React", "Angular"], experience: ["前端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责华为云产品的前端开发工作，参与产品迭代和技术创新",
+              advantages: ["华为正式员工", "高薪资高福利", "技术氛围浓厚", "国际化平台"],
+              disadvantages: ["工作压力大", "考核严格"],
+              interviewQuestions: ["HTTP和HTTPS的区别", "TCP三次握手", "前端安全问题", "如何优化首屏加载速度"] },
+            { id: 5, title: "前端开发实习生", company: "美团", location: "北京", salary: "180-250/天", type: "实习", publishTime: "2026-06-02", 
+              skills: ["HTML", "CSS", "JavaScript", "React"], experience: ["前端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责美团外卖相关产品的前端开发，参与用户体验优化",
+              advantages: ["美团实习证明", "免费三餐", "转正机会", "团队氛围好"],
+              disadvantages: ["工作强度大", "北京生活成本高"],
+              interviewQuestions: ["ES6新特性", "Promise的使用", "async/await的原理", "跨域解决方案"] },
+            
+            // 后端开发 (6-10)
+            { id: 6, title: "Java开发实习生", company: "字节跳动", location: "北京", salary: "220-320/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["Java", "Spring Boot", "MySQL", "Redis", "MQ"], experience: ["后端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责公司核心业务系统的后端开发和维护，参与技术方案设计",
+              advantages: ["大厂实习证明", "导师一对一指导", "免费三餐下午茶", "转正机会"],
+              disadvantages: ["工作强度较大", "北京生活成本高"],
+              interviewQuestions: ["Java的三大特性", "Spring的IOC和AOP", "MySQL索引原理", "Redis的数据结构"] },
+            { id: 7, title: "Java开发工程师（校招）", company: "腾讯", location: "深圳", salary: "20-28K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["Java", "Spring Boot", "MySQL", "Redis", "Docker"], experience: ["后端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责微信支付相关系统的后端开发，参与高并发系统设计",
+              advantages: ["腾讯正式编制", "完善的培训体系", "优厚的福利待遇", "稳定的工作环境"],
+              disadvantages: ["竞争激烈", "流程相对繁琐"],
+              interviewQuestions: ["Java内存模型", "垃圾回收机制", "分布式系统的CAP理论", "如何保证接口的幂等性"] },
+            { id: 8, title: "后端开发工程师", company: "阿里云", location: "杭州", salary: "22-30K/月", type: "全职", publishTime: "2026-06-03", 
+              skills: ["Java", "Spring Cloud", "MySQL", "Redis", "K8s"], experience: ["后端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责阿里云核心产品的后端开发，参与微服务架构设计和优化",
+              advantages: ["阿里技术体系", "广阔的发展空间", "丰厚的年终奖", "完善的福利"],
+              disadvantages: ["杭州房价较高", "加班较多"],
+              interviewQuestions: ["微服务的优缺点", "Spring Cloud组件", "分布式事务解决方案", "限流熔断的实现"] },
+            { id: 9, title: "Python开发工程师", company: "华为", location: "深圳", salary: "18-25K/月", type: "校招", publishTime: "2026-05-30", 
+              skills: ["Python", "Django", "Flask", "MySQL", "MongoDB"], experience: ["后端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责华为云AI平台的后端开发，参与机器学习模型的部署和优化",
+              advantages: ["华为正式员工", "高薪资高福利", "技术氛围浓厚", "国际化平台"],
+              disadvantages: ["工作压力大", "考核严格"],
+              interviewQuestions: ["Python的GIL锁", "Django和Flask的区别", "ORM的原理", "如何优化Python代码性能"] },
+            { id: 10, title: "Go开发实习生", company: "美团", location: "北京", salary: "200-300/天", type: "实习", publishTime: "2026-06-02", 
+              skills: ["Go", "MySQL", "Redis", "gRPC", "Docker"], experience: ["后端开发", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责美团外卖核心系统的后端开发，参与高并发场景的优化",
+              advantages: ["美团实习证明", "免费三餐", "转正机会", "团队氛围好"],
+              disadvantages: ["工作强度大", "北京生活成本高"],
+              interviewQuestions: ["Go的协程和线程的区别", "Channel的使用", "Go的内存管理", "如何处理高并发请求"] },
+            
+            // 数据分析 (11-15)
+            { id: 11, title: "数据分析实习生", company: "字节跳动", location: "北京", salary: "180-260/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["Python", "SQL", "Excel", "Tableau", "统计学"], experience: ["数据分析", "项目经验"], major: ["计算机科学与技术", "统计学", "数学"],
+              description: "负责抖音产品的数据分析工作，为产品决策提供数据支持",
+              advantages: ["大厂实习证明", "导师一对一指导", "免费三餐下午茶", "转正机会"],
+              disadvantages: ["工作强度较大", "北京生活成本高"],
+              interviewQuestions: ["SQL的常用函数", "如何分析用户留存", "什么是A/B测试", "Python数据分析库的使用"] },
+            { id: 12, title: "数据分析师（校招）", company: "腾讯", location: "深圳", salary: "16-22K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["Python", "SQL", "Excel", "Hive", "统计学"], experience: ["数据分析", "项目经验"], major: ["计算机科学与技术", "统计学", "数学"],
+              description: "负责微信支付业务的数据分析，挖掘数据价值，支持业务决策",
+              advantages: ["腾讯正式编制", "完善的培训体系", "优厚的福利待遇", "稳定的工作环境"],
+              disadvantages: ["竞争激烈", "流程相对繁琐"],
+              interviewQuestions: ["什么是数据仓库", "维度建模的方法", "如何处理缺失值和异常值", "数据分析的流程"] },
+            { id: 13, title: "商业分析师", company: "阿里云", location: "杭州", salary: "18-25K/月", type: "全职", publishTime: "2026-06-03", 
+              skills: ["Python", "SQL", "Excel", "Tableau", "商业分析"], experience: ["数据分析", "项目经验"], major: ["计算机科学与技术", "统计学", "工商管理"],
+              description: "负责阿里云业务的商业分析，制定业务策略，提升业务增长",
+              advantages: ["阿里技术体系", "广阔的发展空间", "丰厚的年终奖", "完善的福利"],
+              disadvantages: ["杭州房价较高", "加班较多"],
+              interviewQuestions: ["如何评估一个产品的好坏", "什么是漏斗分析", "如何做用户画像", "商业分析和数据分析的区别"] },
+            { id: 14, title: "数据分析师", company: "华为", location: "深圳", salary: "17-24K/月", type: "校招", publishTime: "2026-05-30", 
+              skills: ["Python", "SQL", "Excel", "Spark", "统计学"], experience: ["数据分析", "项目经验"], major: ["计算机科学与技术", "统计学", "数学"],
+              description: "负责华为云业务的数据分析，为产品和运营提供数据支持",
+              advantages: ["华为正式员工", "高薪资高福利", "技术氛围浓厚", "国际化平台"],
+              disadvantages: ["工作压力大", "考核严格"],
+              interviewQuestions: ["Spark和Hadoop的区别", "什么是数据湖", "如何保证数据质量", "大数据处理的流程"] },
+            { id: 15, title: "数据分析实习生", company: "美团", location: "北京", salary: "160-240/天", type: "实习", publishTime: "2026-06-02", 
+              skills: ["Python", "SQL", "Excel", "Tableau"], experience: ["数据分析", "项目经验"], major: ["计算机科学与技术", "统计学", "数学"],
+              description: "负责美团外卖业务的数据分析，优化运营策略，提升用户体验",
+              advantages: ["美团实习证明", "免费三餐", "转正机会", "团队氛围好"],
+              disadvantages: ["工作强度大", "北京生活成本高"],
+              interviewQuestions: ["如何计算复购率", "什么是 cohort 分析", "SQL的窗口函数", "如何用Python做数据可视化"] },
+            
+            // 产品经理 (16-20)
+            { id: 16, title: "产品经理实习生", company: "字节跳动", location: "北京", salary: "200-280/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["产品设计", "需求分析", "Axure", "数据分析", "沟通能力"], experience: ["产品经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "工商管理"],
+              description: "负责抖音产品的功能设计和迭代，参与产品规划和需求调研",
+              advantages: ["大厂实习证明", "导师一对一指导", "免费三餐下午茶", "转正机会"],
+              disadvantages: ["工作强度较大", "北京生活成本高"],
+              interviewQuestions: ["你常用的产品有哪些，有什么可以改进的地方", "如何做需求优先级排序", "什么是用户体验", "产品经理的职责是什么"] },
+            { id: 17, title: "产品经理（校招）", company: "腾讯", location: "深圳", salary: "18-26K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["产品设计", "需求分析", "Axure", "数据分析", "项目管理"], experience: ["产品经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "工商管理"],
+              description: "负责微信相关产品的规划和设计，推动产品迭代和优化",
+              advantages: ["腾讯正式编制", "完善的培训体系", "优厚的福利待遇", "稳定的工作环境"],
+              disadvantages: ["竞争激烈", "流程相对繁琐"],
+              interviewQuestions: ["如何评估一个功能的好坏", "什么是MVP", "如何和开发沟通", "产品经理需要具备哪些能力"] },
+            { id: 18, title: "产品经理", company: "阿里云", location: "杭州", salary: "20-28K/月", type: "全职", publishTime: "2026-06-03", 
+              skills: ["产品设计", "需求分析", "Axure", "数据分析", "商业思维"], experience: ["产品经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "工商管理"],
+              description: "负责阿里云产品的规划和设计，制定产品路线图，推动产品落地",
+              advantages: ["阿里技术体系", "广阔的发展空间", "丰厚的年终奖", "完善的福利"],
+              disadvantages: ["杭州房价较高", "加班较多"],
+              interviewQuestions: ["什么是B端产品和C端产品的区别", "如何做竞品分析", "什么是用户旅程图", "如何制定产品策略"] },
+            { id: 19, title: "产品经理", company: "华为", location: "深圳", salary: "19-27K/月", type: "校招", publishTime: "2026-05-30", 
+              skills: ["产品设计", "需求分析", "Axure", "数据分析", "沟通能力"], experience: ["产品经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "工商管理"],
+              description: "负责华为云产品的规划和设计，提升产品竞争力和用户体验",
+              advantages: ["华为正式员工", "高薪资高福利", "技术氛围浓厚", "国际化平台"],
+              disadvantages: ["工作压力大", "考核严格"],
+              interviewQuestions: ["什么是产品生命周期", "如何做用户调研", "什么是PRD文档", "如何处理需求变更"] },
+            { id: 20, title: "产品经理实习生", company: "美团", location: "北京", salary: "180-260/天", type: "实习", publishTime: "2026-06-02", 
+              skills: ["产品设计", "需求分析", "Axure", "数据分析"], experience: ["产品经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "工商管理"],
+              description: "负责美团外卖产品的功能设计和优化，提升用户体验和业务指标",
+              advantages: ["美团实习证明", "免费三餐", "转正机会", "团队氛围好"],
+              disadvantages: ["工作强度大", "北京生活成本高"],
+              interviewQuestions: ["如何提升外卖的下单转化率", "什么是AARRR模型", "如何做用户分层", "产品经理的日常工作是什么"] },
+            
+            // 运营 (21-25)
+            { id: 21, title: "运营实习生", company: "字节跳动", location: "北京", salary: "150-220/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["内容运营", "用户运营", "数据分析", "文案写作", "沟通能力"], experience: ["运营经验", "项目经验"], major: ["不限"],
+              description: "负责抖音内容运营和用户运营工作，提升用户活跃度和留存率",
+              advantages: ["大厂实习证明", "导师一对一指导", "免费三餐下午茶", "转正机会"],
+              disadvantages: ["工作强度较大", "北京生活成本高"],
+              interviewQuestions: ["如何提升用户活跃度", "什么是内容运营", "如何写好一篇文案", "运营的核心指标有哪些"] },
+            { id: 22, title: "运营专员（校招）", company: "腾讯", location: "深圳", salary: "14-20K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["用户运营", "活动运营", "数据分析", "文案写作", "项目管理"], experience: ["运营经验", "项目经验"], major: ["不限"],
+              description: "负责微信公众号和小程序的运营，策划线上活动，提升用户粘性",
+              advantages: ["腾讯正式编制", "完善的培训体系", "优厚的福利待遇", "稳定的工作环境"],
+              disadvantages: ["竞争激烈", "流程相对繁琐"],
+              interviewQuestions: ["如何策划一场成功的线上活动", "什么是用户增长", "如何提升用户留存", "运营和产品的关系"] },
+            { id: 23, title: "内容运营", company: "阿里云", location: "杭州", salary: "15-22K/月", type: "全职", publishTime: "2026-06-03", 
+              skills: ["内容运营", "文案写作", "SEO", "数据分析", "新媒体运营"], experience: ["运营经验", "项目经验"], major: ["不限"],
+              description: "负责阿里云官网和公众号的内容运营，提升品牌影响力和流量",
+              advantages: ["阿里技术体系", "广阔的发展空间", "丰厚的年终奖", "完善的福利"],
+              disadvantages: ["杭州房价较高", "加班较多"],
+              interviewQuestions: ["什么是SEO", "如何写好技术文章", "如何提升文章的阅读量", "内容运营的核心是什么"] },
+            { id: 24, title: "运营专员", company: "华为", location: "深圳", salary: "14-21K/月", type: "校招", publishTime: "2026-05-30", 
+              skills: ["市场运营", "活动运营", "数据分析", "文案写作", "沟通能力"], experience: ["运营经验", "项目经验"], major: ["不限"],
+              description: "负责华为云产品的市场运营，策划线上线下活动，提升产品知名度",
+              advantages: ["华为正式员工", "高薪资高福利", "技术氛围浓厚", "国际化平台"],
+              disadvantages: ["工作压力大", "考核严格"],
+              interviewQuestions: ["如何做市场推广", "什么是品牌运营", "如何评估活动效果", "运营需要具备哪些能力"] },
+            { id: 25, title: "运营实习生", company: "美团", location: "北京", salary: "140-200/天", type: "实习", publishTime: "2026-06-02", 
+              skills: ["用户运营", "活动运营", "数据分析", "文案写作"], experience: ["运营经验", "项目经验"], major: ["不限"],
+              description: "负责美团外卖用户运营和活动运营，提升用户活跃度和订单量",
+              advantages: ["美团实习证明", "免费三餐", "转正机会", "团队氛围好"],
+              disadvantages: ["工作强度大", "北京生活成本高"],
+              interviewQuestions: ["如何提升外卖的复购率", "什么是社群运营", "如何做用户召回", "运营的KPI有哪些"] },
+            
+            // 测试 (26-30)
+            { id: 26, title: "测试开发实习生", company: "字节跳动", location: "北京", salary: "200-300/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["Python", "Java", "测试理论", "自动化测试", "SQL"], experience: ["测试经验", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责公司产品的测试工作，编写测试用例，开发自动化测试脚本",
+              advantages: ["大厂实习证明", "导师一对一指导", "免费三餐下午茶", "转正机会"],
+              disadvantages: ["工作强度较大", "北京生活成本高"],
+              interviewQuestions: ["什么是黑盒测试和白盒测试", "如何设计测试用例", "什么是自动化测试", "测试的流程是什么"] },
+            { id: 27, title: "测试开发工程师（校招）", company: "腾讯", location: "深圳", salary: "18-25K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["Python", "Java", "自动化测试", "性能测试", "SQL"], experience: ["测试经验", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责微信产品的测试开发工作，提升测试效率和产品质量",
+              advantages: ["腾讯正式编制", "完善的培训体系", "优厚的福利待遇", "稳定的工作环境"],
+              disadvantages: ["竞争激烈", "流程相对繁琐"],
+              interviewQuestions: ["什么是单元测试、集成测试、系统测试", "如何做性能测试", "什么是接口测试", "测试开发和测试的区别"] },
+            { id: 28, title: "测试开发工程师", company: "阿里云", location: "杭州", salary: "19-26K/月", type: "全职", publishTime: "2026-06-03", 
+              skills: ["Python", "Java", "自动化测试", "接口测试", "Docker"], experience: ["测试经验", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责阿里云产品的测试开发，构建自动化测试体系，保障产品质量",
+              advantages: ["阿里技术体系", "广阔的发展空间", "丰厚的年终奖", "完善的福利"],
+              disadvantages: ["杭州房价较高", "加班较多"],
+              interviewQuestions: ["什么是CI/CD", "如何做持续集成", "什么是测试覆盖率", "如何保证测试的全面性"] },
+            { id: 29, title: "测试工程师", company: "华为", location: "深圳", salary: "17-24K/月", type: "校招", publishTime: "2026-05-30", 
+              skills: ["测试理论", "功能测试", "自动化测试", "SQL", "Linux"], experience: ["测试经验", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责华为云产品的测试工作，编写测试计划和测试用例，执行测试",
+              advantages: ["华为正式员工", "高薪资高福利", "技术氛围浓厚", "国际化平台"],
+              disadvantages: ["工作压力大", "考核严格"],
+              interviewQuestions: ["什么是bug的生命周期", "如何提交一个好的bug", "什么是回归测试", "测试的原则是什么"] },
+            { id: 30, title: "测试实习生", company: "美团", location: "北京", salary: "160-240/天", type: "实习", publishTime: "2026-06-02", 
+              skills: ["测试理论", "功能测试", "SQL", "Linux"], experience: ["测试经验", "项目经验"], major: ["计算机科学与技术", "软件工程"],
+              description: "负责美团外卖产品的功能测试，发现并跟踪bug，保障产品质量",
+              advantages: ["美团实习证明", "免费三餐", "转正机会", "团队氛围好"],
+              disadvantages: ["工作强度大", "北京生活成本高"],
+              interviewQuestions: ["什么是等价类划分法", "什么是边界值分析法", "如何测试一个登录功能", "测试中遇到的最大挑战是什么"] },
+            
+            // 运维 (31-35)
+            { id: 31, title: "运维工程师实习生", company: "字节跳动", location: "北京", salary: "190-280/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["Linux", "Shell", "Docker", "K8s", "MySQL"], experience: ["运维经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "信息工程"],
+              description: "负责公司服务器和系统的运维工作，保障系统稳定运行",
+              advantages: ["大厂实习证明", "导师一对一指导", "免费三餐下午茶", "转正机会"],
+              disadvantages: ["工作强度较大", "需要值班"],
+              interviewQuestions: ["Linux常用命令", "什么是Docker", "什么是K8s", "如何排查系统故障"] },
+            { id: 32, title: "运维工程师（校招）", company: "腾讯", location: "深圳", salary: "17-24K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["Linux", "Shell", "Docker", "K8s", "监控系统"], experience: ["运维经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "信息工程"],
+              description: "负责微信系统的运维工作，保障系统高可用和高性能",
+              advantages: ["腾讯正式编制", "完善的培训体系", "优厚的福利待遇", "稳定的工作环境"],
+              disadvantages: ["竞争激烈", "需要值班"],
+              interviewQuestions: ["什么是DevOps", "什么是CI/CD", "如何做系统监控", "如何处理线上故障"] },
+            { id: 33, title: "SRE工程师", company: "阿里云", location: "杭州", salary: "20-28K/月", type: "全职", publishTime: "2026-06-03", 
+              skills: ["Linux", "Shell", "Python", "Docker", "K8s"], experience: ["运维经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "信息工程"],
+              description: "负责阿里云系统的可靠性工程，提升系统稳定性和可扩展性",
+              advantages: ["阿里技术体系", "广阔的发展空间", "丰厚的年终奖", "完善的福利"],
+              disadvantages: ["杭州房价较高", "需要值班"],
+              interviewQuestions: ["SRE和运维的区别", "什么是服务等级协议(SLA)", "如何做容量规划", "如何提升系统的可用性"] },
+            { id: 34, title: "运维工程师", company: "华为", location: "深圳", salary: "18-25K/月", type: "校招", publishTime: "2026-05-30", 
+              skills: ["Linux", "Shell", "Docker", "K8s", "网络"], experience: ["运维经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "信息工程"],
+              description: "负责华为云系统的运维工作，保障系统安全稳定运行",
+              advantages: ["华为正式员工", "高薪资高福利", "技术氛围浓厚", "国际化平台"],
+              disadvantages: ["工作压力大", "需要值班"],
+              interviewQuestions: ["TCP/IP协议", "什么是防火墙", "什么是负载均衡", "如何保障系统安全"] },
+            { id: 35, title: "运维实习生", company: "美团", location: "北京", salary: "170-250/天", type: "实习", publishTime: "2026-06-02", 
+              skills: ["Linux", "Shell", "Docker", "MySQL"], experience: ["运维经验", "项目经验"], major: ["计算机科学与技术", "软件工程", "信息工程"],
+              description: "负责美团外卖系统的运维工作，参与系统监控和故障排查",
+              advantages: ["美团实习证明", "免费三餐", "转正机会", "团队氛围好"],
+              disadvantages: ["工作强度大", "需要值班"],
+              interviewQuestions: ["如何查看系统负载", "如何查看日志", "什么是进程和线程", "如何优化系统性能"] },
+            
+            // 医疗IT (36-40)
+            { id: 36, title: "医疗IT工程师", company: "药明康德", location: "上海", salary: "15-22K/月", type: "校招", publishTime: "2026-05-29", 
+              skills: ["Java", "Python", "MySQL", "医疗信息化", "HL7"], experience: ["项目经验"], major: ["医学信息工程", "计算机科学与技术", "软件工程"],
+              description: "负责医疗信息系统的开发和维护，支持医药研发和临床研究",
+              advantages: ["行业前景好", "稳定的工作环境", "完善的福利", "专业对口"],
+              disadvantages: ["需要学习医疗知识", "上海生活成本高"],
+              interviewQuestions: ["什么是HL7协议", "医疗信息系统的特点", "如何保障医疗数据安全", "对医疗IT行业的理解"] },
+            { id: 37, title: "医疗数据分析", company: "药明康德", location: "上海", salary: "14-20K/月", type: "校招", publishTime: "2026-05-29", 
+              skills: ["Python", "R", "SQL", "统计学", "生物信息学"], experience: ["数据分析", "项目经验"], major: ["医学信息工程", "统计学", "生物信息学"],
+              description: "负责医疗数据的分析和挖掘，为药物研发提供数据支持",
+              advantages: ["行业前景好", "稳定的工作环境", "完善的福利", "专业对口"],
+              disadvantages: ["需要学习医疗知识", "上海生活成本高"],
+              interviewQuestions: ["什么是生物信息学", "如何分析基因数据", "医疗数据分析和普通数据分析的区别", "对精准医疗的理解"] },
+            { id: 38, title: "医疗系统实施工程师", company: "东软集团", location: "沈阳", salary: "10-15K/月", type: "校招", publishTime: "2026-05-27", 
+              skills: ["SQL", "Linux", "项目实施", "沟通能力", "医疗信息化"], experience: ["项目经验"], major: ["医学信息工程", "计算机科学与技术"],
+              description: "负责医院信息系统的实施和部署，培训医院工作人员使用系统",
+              advantages: ["行业前景好", "稳定的工作环境", "完善的福利", "出差补贴"],
+              disadvantages: ["需要频繁出差", "沈阳薪资相对较低"],
+              interviewQuestions: ["什么是HIS系统", "如何做用户培训", "项目实施流程", "如何处理客户投诉"] },
+            { id: 39, title: "医学影像算法工程师", company: "腾讯医疗", location: "深圳", salary: "20-30K/月", type: "校招", publishTime: "2026-05-26", 
+              skills: ["Python", "深度学习", "OpenCV", "医学影像", "TensorFlow"], experience: ["算法经验", "项目经验"], major: ["医学信息工程", "计算机科学与技术", "生物医学工程"],
+              description: "负责医学影像AI算法的研发和应用，提升疾病诊断准确率",
+              advantages: ["腾讯平台", "前沿技术", "高薪资", "社会价值"],
+              disadvantages: ["技术难度大", "需要医学知识"],
+              interviewQuestions: ["什么是CNN", "如何处理医学影像数据", "数据增强的方法", "模型评估指标"] },
+            { id: 40, title: "健康大数据分析工程师", company: "阿里健康", location: "杭州", salary: "18-26K/月", type: "全职", publishTime: "2026-05-25", 
+              skills: ["Python", "SQL", "Spark", "Hadoop", "统计学"], experience: ["数据分析", "项目经验"], major: ["医学信息工程", "统计学", "计算机科学与技术"],
+              description: "负责健康医疗大数据的分析和挖掘，为健康管理和精准医疗提供支持",
+              advantages: ["阿里平台", "数据资源丰富", "行业前景好", "福利待遇好"],
+              disadvantages: ["加班较多", "杭州房价高"],
+              interviewQuestions: ["什么是健康医疗大数据", "如何保护患者隐私", "数据清洗的方法", "如何做特征工程"] },
+            
+            // 网络安全 (41-45)
+            { id: 41, title: "网络安全实习生", company: "360集团", location: "北京", salary: "180-260/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["Linux", "Python", "网络安全", "渗透测试", "漏洞挖掘"], experience: ["安全经验", "项目经验"], major: ["计算机科学与技术", "网络工程", "信息安全"],
+              description: "负责公司安全产品的测试和漏洞挖掘，参与安全事件应急响应",
+              advantages: ["安全行业领先", "学习机会多", "免费三餐", "转正机会"],
+              disadvantages: ["工作压力大", "需要不断学习"],
+              interviewQuestions: ["什么是SQL注入", "如何防范XSS攻击", "什么是CSRF", "常见的安全工具"] },
+            { id: 42, title: "安全工程师（校招）", company: "腾讯", location: "深圳", salary: "20-28K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["Linux", "Python", "C/C++", "逆向工程", "漏洞分析"], experience: ["安全经验", "项目经验"], major: ["计算机科学与技术", "信息安全", "网络工程"],
+              description: "负责腾讯业务的安全防护，参与安全攻防对抗和漏洞修复",
+              advantages: ["腾讯正式编制", "安全团队强大", "薪资高", "福利好"],
+              disadvantages: ["竞争激烈", "技术压力大"],
+              interviewQuestions: ["什么是栈溢出", "如何分析恶意代码", "什么是零日漏洞", "安全防御的方法"] },
+            { id: 43, title: "渗透测试工程师", company: "华为", location: "深圳", salary: "18-26K/月", type: "校招", publishTime: "2026-05-30", 
+              skills: ["Linux", "Python", "渗透测试", "Metasploit", "Burp Suite"], experience: ["安全经验", "项目经验"], major: ["计算机科学与技术", "信息安全", "网络工程"],
+              description: "负责华为产品和系统的渗透测试，发现安全漏洞并提供修复建议",
+              advantages: ["华为正式员工", "高薪资", "技术氛围好", "国际化平台"],
+              disadvantages: ["工作压力大", "考核严格"],
+              interviewQuestions: ["渗透测试的流程", "如何测试Web应用", "什么是提权", "如何写测试报告"] },
+            { id: 44, title: "安全合规工程师", company: "阿里云", location: "杭州", salary: "19-27K/月", type: "全职", publishTime: "2026-06-03", 
+              skills: ["Linux", "Python", "安全合规", "ISO27001", "等保"], experience: ["安全经验", "项目经验"], major: ["计算机科学与技术", "信息安全", "法学"],
+              description: "负责阿里云的安全合规工作，确保产品符合国内外安全标准和法规",
+              advantages: ["阿里平台", "合规经验宝贵", "薪资高", "福利好"],
+              disadvantages: ["需要了解法规", "工作细致要求高"],
+              interviewQuestions: ["什么是等保2.0", "GDPR的要求", "如何做安全评估", "合规的重要性"] },
+            { id: 45, title: "区块链安全工程师", company: "比特大陆", location: "北京", salary: "22-32K/月", type: "全职", publishTime: "2026-05-24", 
+              skills: ["Python", "Solidity", "区块链", "智能合约", "密码学"], experience: ["安全经验", "项目经验"], major: ["计算机科学与技术", "信息安全", "密码学"],
+              description: "负责区块链系统和智能合约的安全审计，防范安全风险",
+              advantages: ["前沿技术", "薪资高", "发展空间大"],
+              disadvantages: ["行业波动大", "技术更新快"],
+              interviewQuestions: ["什么是智能合约", "常见的安全漏洞", "如何审计智能合约", "区块链的特点"] },
+            
+            // 人工智能/机器学习 (46-50)
+            { id: 46, title: "机器学习实习生", company: "百度", location: "北京", salary: "200-300/天", type: "实习", publishTime: "2026-06-01", 
+              skills: ["Python", "机器学习", "TensorFlow", "PyTorch", "数学"], experience: ["算法经验", "项目经验"], major: ["计算机科学与技术", "人工智能", "统计学"],
+              description: "负责机器学习算法的研究和应用，参与AI产品的开发和优化",
+              advantages: ["AI领域领先", "导师指导", "免费三餐", "转正机会"],
+              disadvantages: ["算法难度大", "北京生活成本高"],
+              interviewQuestions: ["什么是过拟合", "如何选择合适的模型", "什么是梯度下降", "常见机器学习算法"] },
+            { id: 47, title: "NLP工程师（校招）", company: "腾讯", location: "深圳", salary: "22-30K/月", type: "校招", publishTime: "2026-05-28", 
+              skills: ["Python", "NLP", "Transformer", "BERT", "GPT"], experience: ["算法经验", "项目经验"], major: ["计算机科学与技术", "人工智能", "语言学"],
+              description: "负责自然语言处理算法的研发，应用于智能对话、文本分析等场景",
+              advantages: ["腾讯正式编制", "前沿技术", "高薪资", "福利好"],
+              disadvantages: ["竞争激烈", "算法迭代快"],
+              interviewQuestions: ["什么是Attention机制", "Transformer的结构", "如何做文本分类", "预训练模型的使用"] },
+            { id: 48, title: "计算机视觉工程师", company: "商汤科技", location: "上海", salary: "20-28K/月", type: "全职", publishTime: "2026-06-02", 
+              skills: ["Python", "OpenCV", "深度学习", "CNN", "目标检测"], experience: ["算法经验", "项目经验"], major: ["计算机科学与技术", "人工智能", "自动化"],
+              description: "负责计算机视觉算法的研发和应用，包括人脸识别、目标检测等",
+              advantages: ["AI独角兽", "技术前沿", "薪资高", "股权激励"],
+              disadvantages: ["工作压力大", "上海生活成本高"],
+              interviewQuestions: ["什么是YOLO", "如何做图像分类", "数据增强的方法", "模型优化的技巧"] },
+            { id: 49, title: "推荐算法工程师", company: "字节跳动", location: "北京", salary: "25-35K/月", type: "全职", publishTime: "2026-06-01", 
+              skills: ["Python", "机器学习", "推荐系统", "深度学习", "大数据"], experience: ["算法经验", "项目经验"], major: ["计算机科学与技术", "人工智能", "统计学"],
+              description: "负责推荐算法的研发和优化，提升抖音、今日头条等产品的用户体验",
+              advantages: ["大厂平台", "数据丰富", "高薪资", "技术领先"],
+              disadvantages: ["工作强度大", "北京生活成本高"],
+              interviewQuestions: ["什么是协同过滤", "如何做特征工程", "推荐系统的评估指标", "冷启动问题"] },
+            { id: 50, title: "AI产品经理", company: "科大讯飞", location: "合肥", salary: "18-26K/月", type: "校招", publishTime: "2026-05-27", 
+              skills: ["产品设计", "AI技术理解", "需求分析", "项目管理", "沟通能力"], experience: ["产品经验", "项目经验"], major: ["计算机科学与技术", "人工智能", "工商管理"],
+              description: "负责AI产品的规划和设计，将AI技术转化为用户可用的产品功能",
+              advantages: ["AI领域知名企业", "技术积累深厚", "合肥生活成本低", "稳定的工作环境"],
+              disadvantages: ["合肥薪资相对较低", "需要懂AI技术"],
+              interviewQuestions: ["什么是AI产品", "如何做技术可行性分析", "AI产品的特点", "如何与算法团队协作"] }
+        ];
+
+        // 企业数据
+        const companies = {
+            tencent: {
+                name: "腾讯",
+                logo: "🐧",
+                industry: "互联网",
+                description: "腾讯是一家世界领先的互联网科技公司，用创新的产品和服务提升全球各地人们的生活品质。",
+                culture: "用户为本，科技向善",
+                website: "https://www.tencent.com",
+                address: "深圳市南山区",
+                jobs: [2, 7, 12, 17, 27, 42, 47]
+            },
+            bytedance: {
+                name: "字节跳动",
+                logo: "🍎",
+                industry: "互联网",
+                description: "字节跳动是全球领先的内容平台，旗下有抖音、今日头条、TikTok等产品。",
+                culture: "追求极致，坦诚清晰",
+                website: "https://www.bytedance.com",
+                address: "北京市海淀区",
+                jobs: [1, 6, 11, 16, 21, 26, 31, 41, 49]
+            },
+            alibaba: {
+                name: "阿里云",
+                logo: "☁️",
+                industry: "云计算",
+                description: "阿里云是全球领先的云计算及人工智能科技公司，为各行各业提供安全、可靠的计算和数据处理能力。",
+                culture: "客户第一，拥抱变化",
+                website: "https://www.aliyun.com",
+                address: "杭州市西湖区",
+                jobs: [3, 8, 13, 18, 23, 28, 33, 44]
+            },
+            huawei: {
+                name: "华为",
+                logo: "📱",
+                industry: "通信/ICT",
+                description: "华为是全球领先的ICT（信息与通信）基础设施和智能终端提供商。",
+                culture: "以客户为中心，以奋斗者为本",
+                website: "https://www.huawei.com",
+                address: "深圳市龙岗区",
+                jobs: [4, 9, 14, 19, 24, 29, 34, 43]
+            },
+            byd: {
+                name: "比亚迪",
+                logo: "🚗",
+                industry: "新能源汽车",
+                description: "比亚迪是全球领先的新能源汽车制造商，致力于用技术创新满足人们对美好生活的要求。",
+                culture: "技术为王，创新为本",
+                website: "https://www.byd.com",
+                address: "深圳市坪山区",
+                jobs: []
+            },
+            wuxi: {
+                name: "药明康德",
+                logo: "💊",
+                industry: "医药研发",
+                description: "药明康德是全球领先的制药、生物技术以及医疗器械研发开放式能力和技术平台公司。",
+                culture: "客户第一，诚信为本",
+                website: "https://www.wuxiapptec.com",
+                address: "上海市浦东新区",
+                jobs: [36, 37]
+            }
+        };
+
+        // 保存的职位ID数组
+        let savedJobIds = JSON.parse(localStorage.getItem('savedJobIds') || '[]');
+        let currentAnalysisJobId = null;
+
+        // ==================== 页面初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化页面
+            showPage('home');
+            
+            // 绑定事件
+            bindEvents();
+            
+            // 渲染企业卡片
+            renderCompanies();
+            
+            // 渲染职位列表
+            renderJobsList(jobs);
+            
+            // 加载本地存储的数据
+            loadLocalData();
+        });
+
+        // ==================== 页面切换 ====================
+        function showPage(pageName) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.add('hidden');
+            });
+            
+            // 显示目标页面
+            const targetPage = document.getElementById(pageName + 'Page');
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+                targetPage.classList.add('fade-in');
+            }
+            
+            // 更新导航栏状态
+            updateNavState(pageName);
+            
+            // 滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function updateNavState(pageName) {
+            // 更新PC端导航
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('text-primary', 'font-semibold');
+                link.classList.add('text-gray-600');
+            });
+            
+            // 更新移动端导航
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                btn.classList.remove('text-primary', 'border-primary');
+                btn.classList.add('text-gray-600', 'border-transparent');
+            });
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // ==================== 事件绑定 ====================
+        function bindEvents() {
+            // 表单提交
+            const matchForm = document.getElementById('matchForm');
+            if (matchForm) {
+                matchForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    startMatching();
+                });
+            }
+            
+            // 重置按钮
+            const resetMatchBtn = document.getElementById('resetMatchBtn');
+            if (resetMatchBtn) {
+                resetMatchBtn.addEventListener('click', resetMatchForm);
+            }
+            
+            const resetResumeBtn = document.getElementById('resetResumeBtn');
+            if (resetResumeBtn) {
+                resetResumeBtn.addEventListener('click', resetResumeForm);
+            }
+            
+            // 优化按钮
+            const optimizeBtn = document.getElementById('optimizeBtn');
+            if (optimizeBtn) {
+                optimizeBtn.addEventListener('click', optimizeResume);
+            }
+            
+            // 演示按钮
+            const demoBtn = document.getElementById('demoBtn');
+            if (demoBtn) {
+                demoBtn.addEventListener('click', fillDemoData);
+            }
+            
+            // 聊天按钮
+            const chatBtn = document.getElementById('chatBtn');
+            if (chatBtn) {
+                chatBtn.addEventListener('click', toggleChatWindow);
+            }
+            
+            const sendChatBtn = document.getElementById('sendChatBtn');
+            if (sendChatBtn) {
+                sendChatBtn.addEventListener('click', sendMessage);
+            }
+            
+            // 聊天输入框回车发送
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        sendMessage();
+                    }
+                });
+            }
+            
+            // 字数统计
+            const jdInput = document.getElementById('jdInput');
+            if (jdInput) {
+                jdInput.addEventListener('input', function() {
+                    document.getElementById('jdCount').textContent = this.value.length;
+                });
+            }
+            
+            const resumeInput = document.getElementById('resumeInput');
+            if (resumeInput) {
+                resumeInput.addEventListener('input', function() {
+                    document.getElementById('resumeCount').textContent = this.value.length;
+                });
+            }
+            
+            const skillsInput = document.getElementById('skills');
+            if (skillsInput) {
+                skillsInput.addEventListener('input', function() {
+                    document.getElementById('skillsCount').textContent = this.value.length;
+                });
+            }
+            
+            const experienceInput = document.getElementById('experience');
+            if (experienceInput) {
+                experienceInput.addEventListener('input', function() {
+                    document.getElementById('experienceCount').textContent = this.value.length;
+                });
+            }
+            
+            // 回到顶部按钮
+            window.addEventListener('scroll', function() {
+                const backToTopBtn = document.getElementById('backToTopBtn');
+                if (window.scrollY > 300) {
+                    backToTopBtn.classList.remove('hidden');
+                } else {
+                    backToTopBtn.classList.add('hidden');
+                }
+            });
+            
+            const backToTopBtn = document.getElementById('backToTopBtn');
+            if (backToTopBtn) {
+                backToTopBtn.addEventListener('click', function() {
+                    window.scrollTo({ top: 0, duration: 300 });
+                });
+            }
+        }
+
+        // ==================== 渲染函数 ====================
+        function renderCompanies() {
+            const container = document.getElementById('companiesGrid');
+            if (!container) return;
+            
+            container.innerHTML = Object.keys(companies).map(key => {
+                const company = companies[key];
+                return `
+                    <div class="bg-white rounded-lg p-6 text-center hover-lift card-shadow cursor-pointer company-card" onclick="showCompanyDetail('${key}')">
+                        <div class="text-4xl mb-3">${company.logo}</div>
+                        <p class="text-lg font-medium">${company.name}</p>
+                        <p class="text-sm text-gray-500 mt-1">${company.industry}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderJobsList(jobsToRender) {
+            const container = document.getElementById('jobsGrid');
+            if (!container) return;
+            
+            container.innerHTML = jobsToRender.map(job => {
+                const isSaved = savedJobIds.includes(job.id);
+                return `
+                    <div class="bg-white rounded-xl p-6 shadow-md card-hover relative"
+                         onmouseenter="if(window.innerWidth >= 1024) showAnalysisPanel(${job.id})"
+                         onmouseleave="if(window.innerWidth >= 1024) closeJobAnalysisPanel()"
+                         onclick="if(window.innerWidth < 1024) showMobileAnalysis(${job.id})">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">${job.title}</h3>
+                                <p class="text-gray-600 text-sm">${job.company} · ${job.location}</p>
+                            </div>
+                            <button onclick="event.stopPropagation(); toggleSaveJob(${job.id})" class="text-2xl ${isSaved ? 'text-yellow-500' : 'text-gray-300'} hover:text-yellow-500 transition-colors">
+                                <i class="fas fa-star"></i>
+                            </button>
+                        </div>
+                        <p class="text-primary font-medium mb-2">${job.salary}</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            ${job.skills.slice(0, 3).map(skill => `<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">${skill}</span>`).join('')}
+                            ${job.skills.length > 3 ? `<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">+${job.skills.length - 3}</span>` : ''}
+                        </div>
+                        <p class="text-gray-600 text-sm line-clamp-2">${job.description}</p>
+                        <div class="mt-3 text-right">
+                            <span class="text-primary text-sm font-medium">查看详情 <i class="fas fa-chevron-right"></i></span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== 智能匹配算法 ====================
+        function validateMatcherForm() {
+            const name = document.getElementById('name').value.trim();
+            const school = document.getElementById('school').value.trim();
+            const major = document.getElementById('major').value.trim();
+            const intention = document.getElementById('intention').value.trim();
+            const skills = document.getElementById('skills').value.trim();
+            const experience = document.getElementById('experience').value.trim();
+            
+            if (!name || !school || !major || !intention || !skills || !experience) {
+                showToast('请填写所有必填字段', 'error');
+                return false;
+            }
+            
+            return true;
+        }
+
+        function startMatching() {
+            if (!validateMatcherForm()) return;
+            
+            // 获取用户输入
+            const name = document.getElementById('name').value.trim();
+            const major = document.getElementById('major').value.trim();
+            const skillsInput = document.getElementById('skills').value;
+            const experience = document.getElementById('experience').value;
+            const jobIntention = document.getElementById('intention').value;
+            const graduationYear = document.getElementById('gradYear').value;
+            
+            const userSkills = skillsInput.split(',').map(s => s.trim()).filter(Boolean);
+            
+            // 保存当前表单数据
+            saveMatcherFormData();
+            
+            // 显示加载状态
+            const btn = document.getElementById('matchSubmitBtn');
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
+            btn.innerHTML = '';
+            
+            // 模拟AI处理延迟
+            setTimeout(() => {
+                // 使用加权评分算法计算每个岗位的匹配度
+                const scoredJobs = jobs.map(job => {
+                    const skillScore = calcSkillMatchScore(userSkills, job.skills);          // 权重30%
+                    const expScore = calcExperienceScore(experience, job.skills, userSkills); // 权重25%
+                    const profScore = calcProfessionalScore(major, job.major);             // 权重20%
+                    const eduScore = calcEducationScore(graduationYear, job.type);           // 权重15%
+                    const intentScore = calcIntentionScore(jobIntention, job.title);         // 权重10%
+                    
+                    const totalScore = skillScore + expScore + profScore + eduScore + intentScore;
+                    
+                    return {
+                        ...job,
+                        matchScore: Math.min(Math.round(totalScore), 100),
+                        breakdown: { skillScore, expScore, profScore, eduScore, intentScore }
+                    };
+                })
+                .filter(job => job.matchScore >= 60)  // 只保留60分以上的岗位
+                .sort((a, b) => b.matchScore - a.matchScore)
+                .slice(0, 8);  // 返回最多8个匹配结果
+                
+                // 保存并渲染结果
+                saveMatchResults(scoredJobs);
+                renderMatchedResults(scoredJobs);
+                
+                // 恢复按钮状态
+                btn.disabled = false;
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '开始智能匹配';
+                
+                // 显示结果区域
+                document.getElementById('matchResults').classList.remove('hidden');
+                document.getElementById('matchResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 1800);
+        }
+
+        function calcSkillMatchScore(userSkills, jobSkills) {
+            if (!userSkills.length || !jobSkills.length) return 0;
+            
+            const userSkillsLower = userSkills.map(s => s.toLowerCase());
+            const jobSkillsLower = jobSkills.map(s => s.toLowerCase());
+            
+            let matchCount = 0;
+            for (const jobSkill of jobSkillsLower) {
+                for (const userSkill of userSkillsLower) {
+                    if (userSkill.includes(jobSkill) || jobSkill.includes(userSkill)) {
+                        matchCount++;
+                        break;
+                    }
+                }
+            }
+            
+            const matchRatio = matchCount / jobSkills.length;
+            return Math.round(matchRatio * 30);
+        }
+
+        function calcExperienceScore(experience, jobSkills, userSkills) {
+            if (!experience) return 0;
+            
+            const expLower = experience.toLowerCase();
+            let score = 0;
+            
+            // 检查是否包含目标技能关键词
+            for (const skill of jobSkills) {
+                if (expLower.includes(skill.toLowerCase())) {
+                    score += 5;
+                }
+            }
+            
+            // 检查经历长度（越长越详细）
+            if (experience.length > 200) score += 5;
+            if (experience.length > 500) score += 5;
+            
+            return Math.min(score, 25);
+        }
+
+        function calcProfessionalScore(major, jobMajors) {
+            if (!major || !jobMajors || !jobMajors.length) return 10;
+            
+            const majorLower = major.toLowerCase();
+            
+            for (const jobMajor of jobMajors) {
+                if (majorLower.includes(jobMajor.toLowerCase()) || jobMajor.toLowerCase().includes(majorLower)) {
+                    return 20;
+                }
+            }
+            
+            // 相关专业
+            if (majorLower.includes('计算机') || majorLower.includes('软件') || majorLower.includes('信息')) {
+                return 15;
+            }
+            
+            return 8;
+        }
+
+        function calcEducationScore(gradYear, jobType) {
+            if (!gradYear) return 10;
+            
+            const currentYear = 2026;
+            const gradNum = parseInt(gradYear);
+            
+            // 校招岗位优先应届生
+            if (jobType === '校招') {
+                if (gradNum <= currentYear + 1 && gradNum >= currentYear) return 15;
+                if (gradNum === currentYear + 2) return 12;
+                return 8;
+            }
+            
+            // 实习岗位适合在校生
+            if (jobType === '实习' && gradNum >= currentYear) return 13;
+            
+            // 全职岗位不限
+            return 12;
+        }
+
+        function calcIntentionScore(intention, jobTitle) {
+            if (!intention) return 5; // 无意向给中等分
+            
+            const intentions = intention.split(/[,，]/).map(i => i.trim());
+            const jobTitleLower = jobTitle.toLowerCase();
+            
+            for (const intent of intentions) {
+                if (jobTitleLower.includes(intent.toLowerCase())) return 10;
+                // 部分匹配
+                if (intent.length >= 2 && jobTitleLower.includes(intent.toLowerCase())) return 7;
+            }
+            
+            return 4;
+        }
+
+        function renderMatchedResults(matchedJobs) {
+            const container = document.getElementById('matchResultsGrid');
+            if (!container) return;
+            
+            container.innerHTML = matchedJobs.map(job => `
+                <div class="bg-white rounded-xl p-6 shadow-md card-hover">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">${job.title}</h3>
+                            <p class="text-gray-600 text-sm">${job.company} · ${job.location}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${job.matchScore >= 80 ? 'bg-green-100 text-green-800' : job.matchScore >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">
+                            ${job.matchScore}% 匹配
+                        </span>
+                    </div>
+                    <p class="text-primary font-medium mb-2">${job.salary}</p>
+                    <div class="mb-3">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>技能匹配</span>
+                            <span>${job.breakdown.skillScore}/30</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-primary h-2 rounded-full" style="width: ${(job.breakdown.skillScore/30)*100}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span>经验匹配</span>
+                            <span>${job.breakdown.expScore}/25</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-secondary h-2 rounded-full" style="width: ${(job.breakdown.expScore/25)*100}%"></div>
+                        </div>
+                    </div>
+                    <button onclick="showAnalysisPanel(${job.id})" class="w-full mt-3 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                        查看详细分析
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // ==================== 职位分析面板 ====================
+        function showAnalysisPanel(jobId) {
+            currentAnalysisJobId = jobId;
+            const job = jobs.find(j => j.id === jobId);
+            if (!job) return;
+            
+            const panel = document.getElementById('jobAnalysisPanel');
+            const content = document.getElementById('jobAnalysisContent');
+            
+            // 生成分析内容
+            content.innerHTML = generateAnalysisContent(job);
+            
+            // 显示面板
+            panel.classList.remove('translate-x-full');
+        }
+
+        function closeJobAnalysisPanel() {
+            const panel = document.getElementById('jobAnalysisPanel');
+            panel.classList.add('translate-x-full');
+        }
+
+        function showMobileAnalysis(jobId) {
+            const job = jobs.find(j => j.id === jobId);
+            if (!job) return;
+            
+            const modal = document.getElementById('jobAnalysisModal');
+            const content = document.getElementById('mobileJobAnalysisContent');
+            const title = document.getElementById('mobileJobTitle');
+            
+            title.textContent = job.title;
+            content.innerHTML = generateAnalysisContent(job);
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeJobAnalysisModal() {
+            const modal = document.getElementById('jobAnalysisModal');
+            modal.classList.add('hidden');
+        }
+
+        function generateAnalysisContent(job) {
+            return `
+                <h2 class="text-2xl font-bold mb-6">${job.title}</h2>
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">职位信息</h3>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <p><span class="font-medium">公司：</span>${job.company}</p>
+                            <p><span class="font-medium">地点：</span>${job.location}</p>
+                            <p><span class="font-medium">薪资：</span>${job.salary}</p>
+                            <p><span class="font-medium">类型：</span>${job.type}</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">技能要求</h3>
+                        <div class="flex flex-wrap gap-2">
+                            ${job.skills.map(skill => `<span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">${skill}</span>`).join('')}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">职位优势</h3>
+                        <ul class="list-disc list-inside space-y-2">
+                            ${job.advantages.map(adv => `<li class="text-gray-700">${adv}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">职位不足</h3>
+                        <ul class="list-disc list-inside space-y-2">
+                            ${job.disadvantages.map(dis => `<li class="text-gray-700">${dis}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">面试高频题</h3>
+                        <div class="space-y-3">
+                            ${job.interviewQuestions.map((q, i) => `
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <p class="font-medium text-sm">Q${i+1}: ${q}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3">准备建议</h3>
+                        <div class="bg-primary/5 rounded-lg p-4">
+                            <p class="text-gray-700">1. 重点复习${job.skills.slice(0, 3).join('、')}等核心技术</p>
+                            <p class="text-gray-700 mt-2">2. 准备相关项目经验的讲解</p>
+                            <p class="text-gray-700 mt-2">3. 了解${job.company}的企业文化和业务</p>
+                            <p class="text-gray-700 mt-2">4. 练习面试高频题，准备具体案例</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== 企业详情 ====================
+        function showCompanyDetail(companyId) {
+            const company = companies[companyId];
+            if (!company) return;
+            
+            showPage('company');
+            
+            const container = document.getElementById('companyDetails');
+            const companyJobs = jobs.filter(j => company.jobs.includes(j.id));
+            
+            container.innerHTML = `
+                <div class="flex items-center space-x-4 mb-8">
+                    <div class="text-6xl">${company.logo}</div>
+                    <div>
+                        <h1 class="text-3xl font-bold">${company.name}</h1>
+                        <p class="text-gray-600">${company.industry}</p>
+                    </div>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4">企业简介</h2>
+                        <p class="text-gray-700 leading-relaxed">${company.description}</p>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4">基本信息</h2>
+                        <div class="space-y-3">
+                            <p><span class="font-medium">企业文化：</span>${company.culture}</p>
+                            <p><span class="font-medium">公司地址：</span>${company.address}</p>
+                            <p><span class="font-medium">官方网站：</span><a href="${company.website}" target="_blank" class="text-primary hover:underline">${company.website}</a></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h2 class="text-xl font-semibold mb-4">在招职位 (${companyJobs.length})</h2>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        ${companyJobs.map(job => `
+                            <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 cursor-pointer transition-colors" onclick="showAnalysisPanel(${job.id}); showPage('jobs')">
+                                <h3 class="font-semibold">${job.title}</h3>
+                                <p class="text-gray-600 text-sm">${job.location} · ${job.salary}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== 职位库功能 ====================
+        function showJobsTab(tab) {
+            const allTab = document.getElementById('allJobsTab');
+            const savedTab = document.getElementById('savedJobsTab');
+            const grid = document.getElementById('jobsGrid');
+            const noSaved = document.getElementById('noSavedJobs');
+            
+            if (tab === 'all') {
+                allTab.classList.add('bg-primary', 'text-white');
+                allTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                savedTab.classList.remove('bg-primary', 'text-white');
+                savedTab.classList.add('text-gray-600', 'hover:bg-gray-100');
+                
+                grid.classList.remove('hidden');
+                noSaved.classList.add('hidden');
+                renderJobsList(jobs);
+            } else {
+                savedTab.classList.add('bg-primary', 'text-white');
+                savedTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                allTab.classList.remove('bg-primary', 'text-white');
+                allTab.classList.add('text-gray-600', 'hover:bg-gray-100');
+                
+                const savedJobs = jobs.filter(j => savedJobIds.includes(j.id));
+                if (savedJobs.length === 0) {
+                    grid.classList.add('hidden');
+                    noSaved.classList.remove('hidden');
+                } else {
+                    grid.classList.remove('hidden');
+                    noSaved.classList.add('hidden');
+                    renderJobsList(savedJobs);
+                }
+            }
+        }
+
+        function toggleSaveJob(jobId) {
+            const index = savedJobIds.indexOf(jobId);
+            if (index === -1) {
+                savedJobIds.push(jobId);
+                showToast('已收藏职位', 'success');
+            } else {
+                savedJobIds.splice(index, 1);
+                showToast('已取消收藏', 'info');
+            }
+            
+            localStorage.setItem('savedJobIds', JSON.stringify(savedJobIds));
+            
+            // 重新渲染当前视图
+            const allTab = document.getElementById('allJobsTab');
+            if (allTab.classList.contains('bg-primary')) {
+                renderJobsList(jobs);
+            } else {
+                showJobsTab('saved');
+            }
+        }
+
+        // ==================== 简历优化 ====================
+        function optimizeResume() {
+            const jdText = document.getElementById('jdInput').value.trim();
+            const resumeText = document.getElementById('resumeInput').value.trim();
+            
+            if (!jdText || !resumeText) {
+                showToast('请填写JD和简历内容', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            const btn = document.getElementById('optimizeBtn');
+            btn.disabled = true;
+            btn.classList.add('btn-loading');
+            btn.innerHTML = '';
+            
+            setTimeout(() => {
+                // 提取JD关键词
+                const jdKeywords = extractJDKeywords(jdText);
+                
+                // 查找缺失关键词
+                const missing = findMissingKeywords(resumeText, jdKeywords);
+                
+                // 计算匹配分数
+                const totalKeywords = jdKeywords.tech.length + jdKeywords.ability.length;
+                const missingKeywords = missing.missingTech.length + missing.missingAbility.length;
+                const matchScore = totalKeywords > 0 ? Math.round((1 - missingKeywords / totalKeywords) * 100) : 0;
+                
+                // 生成建议
+                const suggestions = generateSuggestions(missing.missingTech, missing.missingAbility);
+                
+                // 渲染结果
+                renderOptimizeResults(matchScore, jdKeywords, missing, suggestions);
+                
+                // 恢复按钮
+                btn.disabled = false;
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '生成优化建议';
+                
+                // 显示结果
+                document.getElementById('optimizeResults').classList.remove('hidden');
+            }, 1500);
+        }
+
+        function extractJDKeywords(jdText) {
+            const jdLower = jdText.toLowerCase();
+            const foundTech = [];
+            const foundAbility = [];
+            
+            // 技术关键词
+            const techKeywords = [
+                'python', 'java', 'javascript', 'c++', 'go', 'rust', 'sql',
+                'react', 'vue', 'angular', 'spring', 'django', 'flask', 'node.js',
+                'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch',
+                'docker', 'kubernetes', 'linux', 'git', 'aws', 'azure',
+                '机器学习', '深度学习', 'nlp', '计算机视觉', 'tensorflow', 'pytorch',
+                'excel', 'tableau', 'powerbi', '数据分析', '数据挖掘',
+                '产品设计', '需求分析', 'axure', '原型设计', '项目管理',
+                'linux', 'shell', '运维', 'devops', 'ci/cd',
+                '网络安全', '渗透测试', '安全审计'
+            ];
+            
+            // 能力关键词
+            const abilityKeywords = [
+                '沟通能力', '团队协作', '项目管理', '领导力', '学习能力',
+                '解决问题能力', '创新意识', '抗压能力', '执行力', '责任心',
+                '数据分析能力', '逻辑思维能力', '快速学习', '独立工作'
+            ];
+            
+            for (const kw of techKeywords) {
+                if (jdLower.includes(kw.toLowerCase()) && !foundTech.includes(kw)) {
+                    foundTech.push(kw);
+                }
+            }
+            
+            for (const kw of abilityKeywords) {
+                if (jdLower.includes(kw.toLowerCase()) && !foundAbility.includes(kw)) {
+                    foundAbility.push(kw);
+                }
+            }
+            
+            return { tech: foundTech, ability: foundAbility };
+        }
+
+        function findMissingKeywords(resumeText, jdKeywords) {
+            const resumeLower = resumeText.toLowerCase();
+            
+            const missingTech = jdKeywords.tech.filter(kw => !resumeLower.includes(kw.toLowerCase()));
+            const missingAbility = jdKeywords.ability.filter(kw => !resumeLower.includes(kw.toLowerCase()));
+            
+            return { missingTech, missingAbility };
+        }
+
+        function generateSuggestions(missingTech, missingAbility) {
+            const suggestions = [];
+            
+            if (missingTech.length > 0) {
+                suggestions.push({
+                    title: '补充技术技能',
+                    content: `你的简历缺少以下关键技术关键词：${missingTech.join('、')}。建议在技能列表或项目经历中体现这些技术。`,
+                    example: missingTech.slice(0, 3).map(t => `熟练掌握${t}，有相关项目经验`).join('\n')
+                });
+            }
+            
+            if (missingAbility.length > 0) {
+                suggestions.push({
+                    title: '补充能力描述',
+                    content: `你的简历缺少以下能力描述：${missingAbility.join('、')}。建议在自我评价或项目经历中体现这些软技能。`,
+                    example: missingAbility.slice(0, 2).map(a => `具备良好的${a}，在XX项目中...`).join('\n')
+                });
+            }
+            
+            if (missingTech.length === 0 && missingAbility.length === 0) {
+                suggestions.push({
+                    title: '简历匹配度很高',
+                    content: '你的简历与JD的关键词匹配度很高，建议进一步优化项目经历的描述，使用STAR法则。',
+                    example: 'S(情境): 在XX项目中\nT(任务): 负责XX功能开发\nA(行动): 采用XX技术实现XX功能\nR(结果): 提升了XX%的性能'
+                });
+            }
+            
+            return suggestions;
+        }
+
+        function renderOptimizeResults(matchScore, jdKeywords, missing, suggestions) {
+            const container = document.getElementById('optimizeResults');
+            
+            container.innerHTML = `
+                <h2 class="text-2xl font-bold text-center mb-8">优化结果</h2>
+                
+                <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+                    <h3 class="text-xl font-semibold mb-4">匹配度分析</h3>
+                    <div class="flex items-center space-x-8">
+                        <div class="text-center">
+                            <div class="text-6xl font-bold text-primary">${matchScore}%</div>
+                            <p class="text-gray-600 mt-2">综合匹配度</p>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="mb-4">
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>技术技能匹配</span>
+                                    <span>${Math.round((1 - missing.missingTech.length / Math.max(jdKeywords.tech.length, 1)) * 100)}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-primary h-3 rounded-full" style="width: ${(1 - missing.missingTech.length / Math.max(jdKeywords.tech.length, 1)) * 100}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>能力要求匹配</span>
+                                    <span>${Math.round((1 - missing.missingAbility.length / Math.max(jdKeywords.ability.length, 1)) * 100)}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="bg-secondary h-3 rounded-full" style="width: ${(1 - missing.missingAbility.length / Math.max(jdKeywords.ability.length, 1)) * 100}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-md mb-8">
+                    <h3 class="text-xl font-semibold mb-4">缺失关键词</h3>
+                    ${missing.missingTech.length > 0 ? `
+                        <div class="mb-4">
+                            <h4 class="font-medium mb-2">技术技能</h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${missing.missingTech.map(kw => `<span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">${kw}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${missing.missingAbility.length > 0 ? `
+                        <div>
+                            <h4 class="font-medium mb-2">能力要求</h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${missing.missingAbility.map(kw => `<span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">${kw}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${missing.missingTech.length === 0 && missing.missingAbility.length === 0 ? `
+                        <p class="text-green-600 font-medium">✓ 你的简历已覆盖JD中的所有关键要求！</p>
+                    ` : ''}
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">优化建议</h3>
+                    <div class="space-y-6">
+                        ${suggestions.map((sug, i) => `
+                            <div class="border-l-4 border-primary pl-4">
+                                <h4 class="font-semibold text-lg mb-2">${i+1}. ${sug.title}</h4>
+                                <p class="text-gray-700 mb-3">${sug.content}</p>
+                                ${sug.example ? `
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <p class="text-sm font-medium text-gray-600 mb-2">建议修改示例：</p>
+                                        <pre class="text-sm text-gray-800 whitespace-pre-wrap">${sug.example}</pre>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== AI聊天助手 ====================
+        function toggleChatWindow() {
+            const chatWindow = document.getElementById('chatWindow');
+            chatWindow.classList.toggle('hidden');
+        }
+
+        function closeChatWindow() {
+            const chatWindow = document.getElementById('chatWindow');
+            chatWindow.classList.add('hidden');
+        }
+
+        function minimizeChatWindow() {
+            closeChatWindow();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // 添加用户消息
+            addMessage(message, 'user');
+            
+            // 清空输入框
+            input.value = '';
+            
+            // 生成AI回复
+            setTimeout(() => {
+                const response = generateAIResponse(message);
+                addMessage(response, 'ai');
+            }, 1000);
+        }
+
+        function sendQuickMessage(message) {
+            const input = document.getElementById('chatInput');
+            input.value = message;
+            sendMessage();
+        }
+
+        function addMessage(text, type) {
+            const container = document.getElementById('chatMessages');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'user' ? 'mb-4 text-right' : 'mb-4';
+            
+            if (type === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="bg-primary text-white rounded-lg rounded-tr-none p-3 max-w-[80%] inline-block text-left">
+                        ${text}
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="bg-gray-100 rounded-lg rounded-tl-none p-3 max-w-[80%]">
+                        ${text}
+                    </div>
+                `;
+            }
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function generateAIResponse(message) {
+            // 基于规则的AI回复
+            const lowerMessage = message.toLowerCase();
+            
+            if (lowerMessage.includes('python') && lowerMessage.includes('不会')) {
+                return '不用担心！很多前端、产品、运营岗位并不要求Python。你可以在求职意向上侧重不需要Python的岗位，比如：前端开发（重点看HTML/CSS/JS）、UI/UX设计、产品经理、运营等。如果目标是数据分析/后端岗位，建议在简历中强调你的学习能力，并列出正在学习的Python课程或项目。';
+            }
+            
+            if (lowerMessage.includes('面试') && (lowerMessage.includes('问') || lowerMessage.includes('准备'))) {
+                return '面试准备建议：\n1. 技术面：复习岗位要求的核心技术，准备2-3个项目案例（用STAR法则描述）\n2. 行为面：准备自我介绍、优缺点、职业规划等常见问题\n3. HR面：了解公司文化、业务，准备向面试官提问的问题\n4. 建议：多刷LeetCode（技术岗）、准备作品集（设计岗）、模拟面试练习';
+            }
+            
+            if (lowerMessage.includes('简历') && (lowerMessage.includes('怎么写') || lowerMessage.includes('优化'))) {
+                return '简历写作建议：\n1. 使用STAR法则描述项目经历（情境-任务-行动-结果）\n2. 量化成果，用数据说话（如"提升30%性能"）\n3. 突出与目标岗位相关的技能和经历\n4. 保持简洁，控制在一页A4纸\n5. 使用我们的"AI简历优化"功能，可以自动对比JD生成优化建议！';
+            }
+            
+            if (lowerMessage.includes('发展') && lowerMessage.includes('前景')) {
+                return '这个岗位的发展前景取决于多个因素：\n1. 行业趋势：关注AI、云计算、新能源等朝阳行业\n2. 公司平台：大厂（腾讯、字节等）有完善的晋升体系\n3. 个人成长：选择能学到核心技术的岗位\n4. 建议：可以问在职的学长学姐，或者在我们的职位库中查看该岗位的详细分析';
+            }
+            
+            if (lowerMessage.includes('薪资') || lowerMessage.includes('工资') || lowerMessage.includes('待遇')) {
+                return '应届生薪资参考（2026届）：\n• 前端/后端开发：18-28K/月（大厂校招）\n• 数据分析：16-24K/月\n• 产品经理：18-28K/月\n• 运营：14-22K/月\n• 实习：150-320/天\n\nTips：薪资谈判时，可以展示你的技术能力和项目经验，合理表达自己的期望。大厂通常有完善的薪资体系，但加班也相对较多。';
+            }
+            
+            // 默认回复
+            return '这是一个很好的问题！基于你的情况，我建议：\n1. 使用我们的"智能岗位匹配"功能，找到最适合你的职位\n2. 使用"AI简历优化"功能，针对性优化简历\n3. 在职位详情中查看面试高频题，提前准备\n\n如果你有更具体的问题，欢迎继续提问！';
+        }
+
+        // ==================== 本地存储 ====================
+        function saveMatcherFormData() {
+            const formData = {
+                name: document.getElementById('name').value,
+                school: document.getElementById('school').value,
+                major: document.getElementById('major').value,
+                gradYear: document.getElementById('gradYear').value,
+                intention: document.getElementById('intention').value,
+                skills: document.getElementById('skills').value,
+                experience: document.getElementById('experience').value,
+                location: document.getElementById('location').value
+            };
+            localStorage.setItem('matcherFormData', JSON.stringify(formData));
+        }
+
+        function loadLocalData() {
+            // 加载匹配表单数据
+            const savedFormData = localStorage.getItem('matcherFormData');
+            if (savedFormData) {
+                const formData = JSON.parse(savedFormData);
+                document.getElementById('name').value = formData.name || '';
+                document.getElementById('school').value = formData.school || '';
+                document.getElementById('major').value = formData.major || '';
+                document.getElementById('gradYear').value = formData.gradYear || '2026';
+                document.getElementById('intention').value = formData.intention || '';
+                document.getElementById('skills').value = formData.skills || '';
+                document.getElementById('experience').value = formData.experience || '';
+                document.getElementById('location').value = formData.location || '';
+                
+                // 更新字数统计
+                if (formData.skills) document.getElementById('skillsCount').textContent = formData.skills.length;
+                if (formData.experience) document.getElementById('experienceCount').textContent = formData.experience.length;
+            }
+        }
+
+        function fillDemoData() {
+            // 填充演示数据
+            document.getElementById('name').value = '张三';
+            document.getElementById('school').value = '北京大学';
+            document.getElementById('major').value = '计算机科学与技术';
+            document.getElementById('gradYear').value = '2026';
+            document.getElementById('intention').value = '前端开发、Web开发';
+            document.getElementById('skills').value = 'HTML, CSS, JavaScript, React, Vue, TypeScript, Node.js';
+            document.getElementById('experience').value = '2025.06-2025.09 | XX科技公司 | 前端开发实习生\n- 使用React开发了公司官网的产品展示页面，提升了30%的用户停留时间\n- 优化页面加载性能，将首屏加载时间从3s降低到1.5s\n- 与设计师和后端工程师协作，完成了3个核心功能模块的开发\n\n2024.09-2025.06 | 校园二手交易平台 | 课程项目\n- 使用Vue.js + Spring Boot开发了一个校园二手交易Web应用\n- 实现了用户注册登录、商品发布、在线聊天、订单管理等功能\n- 项目获得课程设计优秀奖';
+            document.getElementById('location').value = '北京、上海、深圳';
+            
+            // 更新字数统计
+            document.getElementById('skillsCount').textContent = document.getElementById('skills').value.length;
+            document.getElementById('experienceCount').textContent = document.getElementById('experience').value.length;
+            
+            showToast('已填充演示数据，点击"开始智能匹配"查看效果', 'success');
+        }
+
+        function resetMatchForm() {
+            document.getElementById('matchForm').reset();
+            document.getElementById('skillsCount').textContent = '0';
+            document.getElementById('experienceCount').textContent = '0';
+            document.getElementById('matchResults').classList.add('hidden');
+            localStorage.removeItem('matcherFormData');
+        }
+
+        function resetResumeForm() {
+            document.getElementById('jdInput').value = '';
+            document.getElementById('resumeInput').value = '';
+            document.getElementById('jdCount').textContent = '0';
+            document.getElementById('resumeCount').textContent = '0';
+            document.getElementById('optimizeResults').classList.add('hidden');
+        }
+
+        function saveMatchResults(results) {
+            localStorage.setItem('matchResults', JSON.stringify(results));
+        }
+
+        // ==================== 工具函数 ====================
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('errorToast');
+            toast.textContent = message;
+            
+            // 设置颜色
+            toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 fade-in';
+            if (type === 'success') {
+                toast.classList.add('bg-green-500', 'text-white');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-500', 'text-white');
+            } else {
+                toast.classList.add('bg-blue-500', 'text-white');
+            }
+            
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        function showAboutModal() {
+            document.getElementById('aboutModal').classList.remove('hidden');
+        }
+
+        function closeAboutModal() {
+            document.getElementById('aboutModal').classList.add('hidden');
+        }
+
+        // 点击模态框外部关闭
+        document.addEventListener('click', function(e) {
+            const aboutModal = document.getElementById('aboutModal');
+            if (e.target === aboutModal) {
+                closeAboutModal();
+            }
+            
+            const jobModal = document.getElementById('jobAnalysisModal');
+            if (e.target === jobModal) {
+                closeJobAnalysisModal();
+            }
+        });
+    </script>
+</body>
+</html>
